@@ -9,7 +9,7 @@ float32 getDepth(Camera cam1, Camera cam2, Point point1, Point point2, float32 b
     float32 angleB = M_PI_2 - (cam2.getFov().horizontal / 2) + angleFromCam2; //In Radians
     float32 angleC = angleFromCam1 - angleFromCam2; //In Radians
 
-    return ((baseLine * sin(angleA) * sin(angleB)) / sin(angleC)) / cos(cam1.getFov().vertical); //distance from the point between the cameras. 
+    return (baseLine * sin(angleA) * sin(angleB)) / (sin(angleC) * cos(cam1.getFov().vertical)); //distance from the point between the cameras. 
     
 }
 
