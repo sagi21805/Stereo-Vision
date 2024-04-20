@@ -7,7 +7,7 @@ struct Camera {
     private: 
         cv::VideoCapture cam; 
         FOV fov; // In Radians
-        cv::Size_<uint16_t> frameSize; // In Pixels
+        Size frameSize; // In Pixels
         float32 focalLength; // In Pixels
         float32 angleToPixle_H;
         float32 angleToPixel_V;
@@ -22,6 +22,12 @@ struct Camera {
             return cam.read(outFrame);
         }
 
-        float32 angleToCamera(uint16_t);
+        FOV angleToCamera(Point point) {
+            return FOV(point.x * angleToPixle_H, point.y * angleToPixel_V);
+        }
+
+        FOV getFov() {
+            return this->fov; 
+        }
 
 };
