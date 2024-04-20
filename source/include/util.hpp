@@ -5,6 +5,8 @@ using cv::Mat;
 typedef float float32;
 typedef double float64;
 typedef struct FOV FOV;
+typedef cv::Point_<uint16_t> Point;
+typedef cv::Size_<uint16_t> Size;
 
 struct FOV {
     const float32 horizontal;
