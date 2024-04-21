@@ -1,4 +1,7 @@
-#include "util.hpp"
+#ifndef _Camera_
+#define _Camera_
+
+#include "Util.hpp"
 
 typedef struct Camera Camera;
 
@@ -31,3 +34,5 @@ struct Camera {
         }
 
 };
+
+#endif
