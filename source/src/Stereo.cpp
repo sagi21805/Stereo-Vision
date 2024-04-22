@@ -28,26 +28,3 @@ uint32_t windowMSE(Mat img1, Mat img2, uint32_t windowSize, uint32_t imgRow, uin
     }
     return MSE;
 }
-//     }
-// }
-
-int main() {
-    uchar testArray[] {
-     0,  1,  2,  3,  4,  5,  6,  7,  8,
-     10, 11, 12, 13, 14, 15, 16, 17, 18,
-     20, 21, 22, 23, 24, 25, 26, 27, 28,
-    };
-
-    uchar testArray2[] {
-     1,  2,  3,  4,  8,  6,  7,  8, 9,
-     11, 12, 13, 14, 15, 16, 17, 18, 19,
-     21, 22, 23, 24, 25, 26, 27, 28, 29
-    };
-
-    cv::Mat A(3, 9, CV_8U);
-    cv::Mat B(3, 9, CV_8U);
-    std::memcpy(A.data, testArray, 3*9*sizeof(uchar));
-    std::memcpy(B.data, testArray2, 3*9*sizeof(uchar));
-
-    std::cout << windowMSE(A, B, 3, 0, 1) << "\n";
-} 
