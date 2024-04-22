@@ -11,20 +11,29 @@ struct Camera {
 
     private: 
         cv::VideoCapture cam; 
-        FOV fov; // In Radians
         Size frameSize; // In Pixels
         float32 focalLength; // In Pixels
+        FOV fov; // In Radians
         float32 angleToPixle_H;
         float32 angleToPixel_V;
 
+        static float32 calcFocalLength(Size frameSize, FOV fov);
+
+        static FOV calcFov(Size frameSize, float32 focalLength);
 
     public: 
 
-        Camera(uint32_t index, FOV fov, cv::Size_<uint16_t> frameSize, float32 focalLength);
+        Camera() = default;
+
+        Camera(uint32_t index, Size frameSize, float32 focalLength);
+        
+        Camera(uint32_t index, Size frameSize, FOV fov);
 
         bool getFrame(Mat outFrame);
 
         FOV angleToCamera(Point point);
+        
+        float32 getFocalLegth();
 
         FOV getFov();
 
