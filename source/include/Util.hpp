@@ -22,7 +22,10 @@ struct FOV {
     FOV();
 
     FOV (float32 horizonatlAngle, float32 verticalAngle);
+
 };
+
+std::ostream& operator<<(std::ostream& os, FOV f);
 
 float32 toRadians(float32 angle);
 
