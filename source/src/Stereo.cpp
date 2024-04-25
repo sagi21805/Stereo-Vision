@@ -28,3 +28,14 @@ uint32_t windowMSE(Mat img1, Mat img2, uint32_t windowSize, uint32_t imgRow, uin
     }
     return MSE;
 }
+
+void printWindow(Mat img, uint32_t windowSize, uint32_t imgRow, uint32_t imgCol) {
+    uchar* imgData = img.ptr();
+    for (uint32_t windowRow = 0; windowRow < windowSize; windowRow++){
+        std::cout << "\n";
+        for (uint32_t windowCol = 0; windowCol < windowSize; windowCol++){
+            std::cout << (int) *(imgData + windowCol + windowRow*img.cols + imgCol*windowSize + imgRow*img.cols*windowSize) << " ";
+        }
+    }
+    std::cout << "\n";
+}
