@@ -14,6 +14,7 @@ typedef double float64;
 typedef struct FOV FOV;
 typedef cv::Point_<uint16_t> Point;
 typedef cv::Size_<uint16_t> Size;
+typedef struct Pose2d Pose2d;
 
 struct FOV {
     const float32 horizontal;
@@ -23,6 +24,14 @@ struct FOV {
 
     FOV (float32 horizonatlAngle, float32 verticalAngle);
 
+};
+
+struct Pose2d {
+    uint16_t row;
+    uint16_t col;
+    
+    Pose2d() = default;
+    Pose2d(uint16_t row, uint16_t col) : row(row), col(col) {}
 };
 
 std::ostream& operator<<(std::ostream& os, FOV f);
