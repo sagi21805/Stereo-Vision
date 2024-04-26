@@ -33,16 +33,34 @@ int main() {
     uint32_t windowsPerCol = (img1.cols / windowSize);
     uint32_t windowsPerRow = (img1.rows / windowSize);
 
-    std::vector<bool> v(windowsPerRow*windowsPerCol, false); 
+    std::vector<bool> canMatchWindow(windowsPerRow*windowsPerCol, true); 
     
     for (uint32_t imgRow = 0; imgRow < img1.rows; imgRow++) {
 
-        for (uint32_t currentCol = 0; currentCol < windowsPerRow; currentCol++) {
+        for (uint32_t currentCol = 0; currentCol < windowsPerCol; currentCol++) {
 
+            Pose2d currentWindowPose(imgRow, currentCol);
+            uint32_t error = UINT32_MAX;
+            Pose2d matchingWindowPose(UINT16_MAX, UINT16_MAX);
+            //write this max in a more std lib way.
             for (uint32_t matchedCol = 0; matchedCol < windowsPerCol; matchedCol++) {
 
+                Pose2d matchedWindowPose(imgRow, matchedCol);
 
+                uint32_t currentError = windowMSE(img1, img2, windowSize, currentWindowPose, matchedWindowPose); 
+
+                if (currentError < error && canMatchWindow[matchedCol + imgRow*windowsPerCol]) {
+                    error  = currentError;
+                    matchingWindowPose = matchedWindowPose;
+                }
             }
+
+            if (error < UINT32_MAX) {
+                canMatchWindow[matchingWindowPose.col + matchingWindowPose.row * windowsPerCol] = false;
+                // currentWindowPose and matchingWindow are matching
+                // create a calc distance for them and set it in the depth map
+            }
+
         }
 
     }
