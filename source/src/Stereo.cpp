@@ -13,15 +13,15 @@ float32 getDepth(Camera cam1, Camera cam2, Point point1, Point point2, float32 b
     
 }
 
-uint32_t windowMSE(Mat img1, Mat img2, uint32_t windowSize, uint32_t imgRow, uint32_t imgCol) {        
+uint32_t windowMSE(Mat img1, Mat img2, uint32_t windowSize, Pose2d pose1, Pose2d pose2) {        
 
     uchar* img1Data = img1.ptr();
     uchar* img2Data = img2.ptr();
     uint32_t MSE = 0;
     for (uint32_t windowRow = 0; windowRow < windowSize; windowRow++){
         for (uint32_t windowCol = 0; windowCol < windowSize; windowCol++){
-            int16_t a = *(img1Data + windowCol + windowRow*img1.cols + imgCol*windowSize + imgRow*img1.cols*windowSize);
-            int16_t b = *(img2Data + windowCol + windowRow*img2.cols + imgCol*windowSize + imgRow*img2.cols*windowSize);
+            int16_t a = *(img1Data + windowCol + windowRow*img1.cols + pose1.col*windowSize + pose1.row*img1.cols*windowSize);
+            int16_t b = *(img2Data + windowCol + windowRow*img2.cols + pose2.col*windowSize + pose2.row*img2.cols*windowSize);
             MSE += (a-b)*(a-b);
             
         }
