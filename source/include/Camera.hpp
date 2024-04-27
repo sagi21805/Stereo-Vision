@@ -29,9 +29,11 @@ struct Camera {
         
         Camera(uint32_t index, Size frameSize, FOV fov);
 
+        Camera(Size frameSize, float32 focalLength);
+
         bool getFrame(Mat outFrame);
 
-        FOV angleToCamera(Point point);
+        FOV angleToCamera(Pose2d windowPose);
         
         float32 getFocalLegth();
 
