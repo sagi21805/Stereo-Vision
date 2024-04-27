@@ -36,9 +36,15 @@ struct Pose2d {
 
 std::ostream& operator<<(std::ostream& os, FOV f);
 
-float32 toRadians(float32 angle);
+namespace  Utils {
 
-float32 toDegrees(float32 radian);
+    float32 toRadians(float32 angle);
+    float32 toDegrees(float32 radian);          
+    void printWindow(Mat img, uint32_t windowSize, uint32_t imgRow, uint32_t imgCol);
+
+}
+
+
 
 #endif
 
