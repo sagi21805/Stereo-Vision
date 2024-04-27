@@ -2,4 +2,6 @@
 cmake -B build;
 cd build;
 make -j4;
+mv ./Stereo ../Stereo
+cd ..
 ./Stereo;
