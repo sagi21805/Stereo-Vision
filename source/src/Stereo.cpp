@@ -4,16 +4,18 @@ Stereo::Stereo(Camera cam1, Camera cam2, float32 baseLine, uint8_t windowSize)
     : cam1(cam1), cam2(cam2), baseLine(baseLine), windowSize(windowSize) {
         cam1.getFrame(frame1);        
         cam2.getFrame(frame2);
+        // frame1 = cv::imread("data/im0-min.jpeg"); //TODO create a way for dummy stereo
+        // frame2 = cv::imread("data/im1-min.jpeg");
         //TODO make a check that frame one is in the same shape as frame2;
         windowsPerRow = frame1.rows / windowSize;
         windowsPerCol = frame1.cols / windowSize;
         canMatchWindow = std::vector<bool>(windowsPerRow*windowsPerCol, true); 
     }
 
-float32 Stereo::getDepth(Point point1, Point point2, float32 baseLine) {
+float32 Stereo::getDepth(Pose2d firstWindowPose, Pose2d secondWindowPose) {
 
-    FOV angleFromCam1 = cam1.angleToCamera(point1);
-    float32 angleFromCam2_H = cam2.angleToCamera(point2).horizontal;
+    FOV angleFromCam1 = cam1.angleToCamera(firstWindowPose);
+    float32 angleFromCam2_H = cam2.angleToCamera(secondWindowPose).horizontal;
 
     float32 angleA = M_PI_2 + (cam1.getFov().horizontal / 2) - angleFromCam1.horizontal; //In Radians
     float32 angleB = M_PI_2 - (cam2.getFov().horizontal / 2) + angleFromCam2_H; //In Radians
@@ -45,7 +47,7 @@ Pose2d Stereo::matchingWindowPosition(Pose2d matchedWindowPose) {
     uint32_t error = UINT32_MAX;
 
     for (uint32_t startCol = 0; startCol < windowsPerCol; startCol++) {
-        int32_t currentErr = windowMSE(windowSize, matchedWindowPose, Pose2d(matchedWindowPose.row, startCol));  
+        uint32_t currentErr = windowMSE(windowSize, matchedWindowPose, Pose2d(matchedWindowPose.row, startCol));  
         if (currentErr < error && canMatchWindow[startCol + matchedWindowPose.row*windowsPerCol]) {   
             error = currentErr;
             matchingCol = startCol;

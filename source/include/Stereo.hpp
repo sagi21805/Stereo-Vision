@@ -25,7 +25,7 @@ class Stereo {
 
     Stereo(Camera cam1, Camera cam2, float32 baseLine, uint8_t windowSize);
 
-    float32 getDepth(Point point1, Point point2, float32 baseLine);
+    float32 getDepth(Pose2d firstWindowPose, Pose2d secondWindowPose);
 
     uint32_t windowMSE(uint32_t windowSize, Pose2d pose1, Pose2d pose2);
 
