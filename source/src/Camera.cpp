@@ -13,6 +13,12 @@ Camera::Camera(uint32_t index, Size frameSize, FOV fov) :
     angleToPixel_V(fov.vertical / frameSize.height)
     {}
 
+Camera::Camera(Size frameSize, float32 focalLength) : 
+    cam(), frameSize(frameSize), focalLength(focalLength), 
+    fov(Camera::calcFov(frameSize, focalLength)), angleToPixle_H(fov.horizontal / frameSize.width), 
+    angleToPixel_V(fov.vertical / frameSize.height)
+    {}
+
 float32 Camera::calcFocalLength(Size frameSize, FOV fov) {
     return frameSize.width / (2*tan(fov.horizontal/2));
 }
@@ -25,8 +31,8 @@ bool Camera::getFrame(Mat outFrame) {
     return cam.read(outFrame);
 }
 
-FOV Camera::angleToCamera(Point point) {
-    return FOV(point.x * angleToPixle_H, point.y * angleToPixel_V);
+FOV Camera::angleToCamera(Pose2d windowPose) {
+    return FOV(windowPose.col * angleToPixle_H, windowPose.row * angleToPixel_V);
 }
 
 FOV Camera::getFov() {
