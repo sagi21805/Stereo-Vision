@@ -17,52 +17,30 @@ void test() {
 
     cv::Mat A(10,10,CV_8U);
     std::memcpy(A.data, testArray, 10*10*sizeof(uchar));
-    printWindow(A, 3, 0, 1);
+    Utils::printWindow(A, 3, 0, 1);
 
 }
 
 int main() {
 
-    Camera cam(0, Size(2864, 1924), 2945.377);
-    Camera cam1(1, Size(2864, 1924), 2945.377);
-
-    Mat img1; cam.getFrame(img1);
-    Mat img2; cam.getFrame(img2);
-
+    Camera cam1(0, Size(2864, 1924), 2945.377);
+    Camera cam2(1, Size(2864, 1924), 2945.377);
+    float32 baseLine = 100.1; //mm
     uint8_t windowSize = 3;
-    uint32_t windowsPerCol = (img1.cols / windowSize);
-    uint32_t windowsPerRow = (img1.rows / windowSize);
+    Stereo stereo(cam1, cam2, baseLine, windowSize);
 
-    std::vector<bool> canMatchWindow(windowsPerRow*windowsPerCol, true); 
     
-    for (uint32_t imgRow = 0; imgRow < img1.rows; imgRow++) {
+    for (uint32_t imgRow = 0; imgRow < stereo.windowsPerRow; imgRow++) {
 
-        for (uint32_t currentCol = 0; currentCol < windowsPerCol; currentCol++) {
+        for (uint32_t currentCol = 0; currentCol < stereo.windowsPerCol; currentCol++) {
 
             Pose2d currentWindowPose(imgRow, currentCol);
-            uint32_t error = UINT32_MAX;
-            Pose2d matchingWindowPose(UINT16_MAX, UINT16_MAX);
-            //write this max in a more std lib way.
-            for (uint32_t matchedCol = 0; matchedCol < windowsPerCol; matchedCol++) {
+            Pose2d matchingWindowPose = stereo.matchingWindowPosition(currentWindowPose);
+            
 
-                Pose2d matchedWindowPose(imgRow, matchedCol);
-
-                uint32_t currentError = windowMSE(img1, img2, windowSize, currentWindowPose, matchedWindowPose); 
-
-                if (currentError < error && canMatchWindow[matchedCol + imgRow*windowsPerCol]) {
-                    error  = currentError;
-                    matchingWindowPose = matchedWindowPose;
-                }
-            }
-
-            if (error < UINT32_MAX) {
-                canMatchWindow[matchingWindowPose.col + matchingWindowPose.row * windowsPerCol] = false;
-                // currentWindowPose and matchingWindow are matching
-                // create a calc distance for them and set it in the depth map
-            }
-
+                // TODO currentWindowPose and matchingWindow are matching
+                // TODO create a calc distance for them and set it in the depth map
         }
-
     }
 
 
