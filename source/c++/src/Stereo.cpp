@@ -2,10 +2,10 @@
 
 Stereo::Stereo(Camera cam1, Camera cam2, float32 baseLine, uint8_t windowSize) 
     : cam1(cam1), cam2(cam2), baseLine(baseLine), windowSize(windowSize) {
-        cam1.getFrame(frame1);        
-        cam2.getFrame(frame2);
-        // frame1 = cv::imread("data/im0-min.jpeg"); //TODO create a way for dummy stereo
-        // frame2 = cv::imread("data/im1-min.jpeg");
+        // cam1.getFrame(frame1);        
+        // cam2.getFrame(frame2);
+        frame1 = cv::imread("data/im0-min.jpeg"); //TODO create a way for dummy stereo
+        frame2 = cv::imread("data/im1-min.jpeg");
         //TODO make a check that frame one is in the same shape as frame2;
         windowsPerRow = frame1.rows / windowSize;
         windowsPerCol = frame1.cols / windowSize;

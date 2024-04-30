@@ -28,8 +28,10 @@ int main() {
     float32 baseLine = 100.1; //mm
     uint8_t windowSize = 3;
     Stereo stereo(cam1, cam2, baseLine, windowSize);
+    float32 depthMap[stereo.windowsPerCol*stereo.windowsPerRow];
+    cv::cvtColor(stereo.frame1, stereo.frame1, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(stereo.frame2, stereo.frame2, cv::COLOR_BGR2GRAY);
 
-    
     for (uint32_t imgRow = 0; imgRow < stereo.windowsPerRow; imgRow++) {
 
         for (uint32_t currentCol = 0; currentCol < stereo.windowsPerCol; currentCol++) {
@@ -37,11 +39,23 @@ int main() {
             Pose2d currentWindowPose(imgRow, currentCol);
             Pose2d matchingWindowPose = stereo.matchingWindowPosition(currentWindowPose);
             
+            float32 depth = stereo.getDepth(currentWindowPose, matchingWindowPose);
+
+            *(depthMap + currentCol + imgRow * stereo.windowsPerCol) = depth;
 
                 // TODO currentWindowPose and matchingWindow are matching
                 // TODO create a calc distance for them and set it in the depth map
         }
     }
+
+    stereo.canMatchWindow = std::vector<bool>(stereo.windowsPerCol*stereo.windowsPerRow, true);
+    Mat map(stereo.windowsPerRow, stereo.windowsPerCol, CV_32F);
+    map.data = (uchar*) depthMap;
+    Mat img;
+    cv::resize(stereo.frame1, img, cv::Size(stereo.windowsPerCol, stereo.windowsPerRow));
+    cv::imshow("img", img);
+    cv::imshow("map", map);
+    cv::waitKey(0);
 
 
 }
