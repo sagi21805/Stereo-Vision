@@ -9,7 +9,7 @@ find_package(OpenCV REQUIRED )
 set(CMAKE_CXX_FLAGS "-Wall -std=c++23 -O3 -save-temps")
 
 include_directories(${OpenCV_INCLUDE_DIRS})
-include_directories(${PROJECT_SOURCE_DIR}/source/include)
+include_directories(${PROJECT_SOURCE_DIR}/source/c++/include)
 
 file(GLOB source ${PROJECT_SOURCE_DIR}/source/c++/src/*.cpp)
 
