@@ -8,13 +8,13 @@ from _utils import Size, FOV, Pose2d
 
 struct Camera:
     var cam: PythonObject
-    var frame_size: Size[DType.uint16]  # In Pixels
+    var frame_size: Size[DType.uint32]  # In Pixels
     var focal_length: Float32  # In Pixels
     var fov: FOV[DType.float32]  # In Radians
     var ratio: SIMD[DType.float32, 2]
 
     fn __init__[
-        index: UInt32, frame_size: Size[DType.uint16], focal_length: Float32
+        index: UInt32, frame_size: Size[DType.uint32], focal_length: Float32
     ](inout self) raises:
         Python.add_to_path("../python")
         var python_utils: PythonObject = Python.import_module("_utils")
@@ -31,7 +31,7 @@ struct Camera:
         self.ratio = self.fov.fov / frame_size.size.cast[DType.float32]()
 
     fn __init__[
-        index: UInt32, frame_size: Size[DType.uint16], fov: FOV[DType.float32]
+        index: UInt32, frame_size: Size[DType.uint32], fov: FOV[DType.float32]
     ](inout self) raises:
         Python.add_to_path("../python")
         var python_utils: PythonObject = Python.import_module("_utils")
@@ -45,7 +45,7 @@ struct Camera:
         self.ratio = fov.fov / frame_size.size.cast[DType.float32]()
 
     fn __init__[
-        frame_size: Size[DType.uint16], fov: FOV[DType.float32]
+        frame_size: Size[DType.uint32], fov: FOV[DType.float32]
     ](inout self) raises:
         Python.add_to_path("../python")
         var python_utils: PythonObject = Python.import_module("_utils")
