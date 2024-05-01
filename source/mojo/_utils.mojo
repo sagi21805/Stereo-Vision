@@ -208,6 +208,9 @@ struct Pose2d[type: DType]:
     fn __init__(inout self):
         self.pose = SIMD[type, 2](0, 0)
 
+    fn __init__(inout self, pose: SIMD[type, 2]):
+        self.pose = pose
+
     fn __init__(inout self, row: SIMD[type, 1], col: SIMD[type, 1]):
         self.pose = SIMD[type, 2](row, col)
 
@@ -232,3 +235,6 @@ struct Size[type: DType]:
 
     fn height(inout self) -> SIMD[type, 1]:
         return self.size[1]
+
+    fn area(inout self) -> Int:
+        return SIMD[DType.int32, 1](self.width() * self.height()).value
