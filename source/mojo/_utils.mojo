@@ -183,6 +183,14 @@ fn numpy_data_pointer_tf32(
     )
 
 
+fn get_window_view[
+    window_size: Int
+](img: PythonObject, python_utils: PythonObject) raises -> DTypePointer[DType.uint8]:
+    return numpy_data_pointer_ui8(
+        python_utils.get_window_view(img, window_size)
+    )
+
+
 struct FOV[type: DType]:
     var fov: SIMD[type, 2]
 
