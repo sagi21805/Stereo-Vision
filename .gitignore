@@ -2,3 +2,4 @@ build
 .vscode
 Stereo
 test.*
+__pycache__
