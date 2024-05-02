@@ -1,6 +1,6 @@
 from python import Python
-from _utils import Size, FOV, Pose2d
-from camera import Camera
+from source.mojo._utils import Size, FOV, Pose2d
+from source.mojo.camera import Camera
 import math
 
 
@@ -74,4 +74,3 @@ struct Stereo:
 
     #     for window_row in range(window_size):
     #         for window_col in range(window_size):
-                

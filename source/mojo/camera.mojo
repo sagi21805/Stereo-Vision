@@ -3,7 +3,7 @@ from time import now
 from math import clamp
 import math
 from python import Python
-from _utils import Size, FOV, Pose2d
+from source.mojo._utils import Size, FOV, Pose2d
 
 
 struct Camera:
