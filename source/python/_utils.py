@@ -12,8 +12,8 @@ def read_image(path: str):
 def get_window_view(img: np.ndarray, window_size: int):
     if img.ndim == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = cv2.resize(img, (1280, 800))   
-    return np.lib.stride_tricks.sliding_window_view(img, (window_size, window_size)).flatten().copy()
+    img = cv2.resize(img, (1280, 720))   
+    return np.lib.stride_tricks.sliding_window_view(img, (window_size, window_size))[::window_size].flatten().copy()
         
 
 def get_test_arr():
