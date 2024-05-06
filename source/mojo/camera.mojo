@@ -62,7 +62,7 @@ struct Camera[]:
         self.fov = FOV[DType.float32](
             2
             * math.atan(
-                frame_size.size.cast[DType.float32]() / 2 * focal_length
+                frame_size.size.cast[DType.float32]() / (2 * focal_length)
             )
         )
         self.ratio = self.fov.fov / frame_size.size.cast[DType.float32]()
