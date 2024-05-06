@@ -9,7 +9,7 @@ typedef struct Camera Camera;
 
 struct Camera {
 
-    private: 
+    public: 
         cv::VideoCapture cam; 
         Size frameSize; // In Pixels
         float32 focalLength; // In Pixels

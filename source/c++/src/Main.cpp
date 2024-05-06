@@ -1,5 +1,6 @@
 #include "Stereo.hpp"
-
+#include <chrono>
+using namespace std::chrono;
 void test() {
 
     uchar testArray[] {
@@ -22,16 +23,21 @@ void test() {
 }
 
 int main() {
+    auto start = high_resolution_clock::now();
 
     Camera cam1(0, Size(2864, 1924), 2945.377);
     Camera cam2(1, Size(2864, 1924), 2945.377);
-    float32 baseLine = 100.1; //mm
-    uint8_t windowSize = 3;
+    float32 baseLine = 178.232; //mm
+    uint8_t windowSize = 2;
     Stereo stereo(cam1, cam2, baseLine, windowSize);
-    float32 depthMap[stereo.windowsPerCol*stereo.windowsPerRow];
+
+    std::cout << "angle to pixel: " << cam1.angleToPixle_H << "\n";
+
     cv::cvtColor(stereo.frame1, stereo.frame1, cv::COLOR_BGR2GRAY);
     cv::cvtColor(stereo.frame2, stereo.frame2, cv::COLOR_BGR2GRAY);
+    Utils::printWindow(stereo.frame1, 2, 0, 0);
 
+    float32 depthMap[stereo.windowsPerCol*stereo.windowsPerRow];
     for (uint32_t imgRow = 0; imgRow < stereo.windowsPerRow; imgRow++) {
 
         for (uint32_t currentCol = 0; currentCol < stereo.windowsPerCol; currentCol++) {
@@ -41,6 +47,7 @@ int main() {
             
             float32 depth = stereo.getDepth(currentWindowPose, matchingWindowPose);
 
+          
             *(depthMap + currentCol + imgRow * stereo.windowsPerCol) = depth;
 
                 // TODO currentWindowPose and matchingWindow are matching
@@ -51,11 +58,19 @@ int main() {
     stereo.canMatchWindow = std::vector<bool>(stereo.windowsPerCol*stereo.windowsPerRow, true);
     Mat map(stereo.windowsPerRow, stereo.windowsPerCol, CV_32F);
     map.data = (uchar*) depthMap;
-    Mat img;
-    cv::resize(stereo.frame1, img, cv::Size(stereo.windowsPerCol, stereo.windowsPerRow));
-    cv::imshow("img", img);
-    cv::imshow("map", map);
-    cv::waitKey(0);
+    // Mat img;
+    // cv::resize(stereo.frame1, img, cv::Size(stereo.windowsPerCol, stereo.windowsPerRow));
+    // cv::imshow("img", img);
+    // cv::imshow("map", map);
+    // cv::waitKey(0);
+    for (int i = 0; i < 10; i++){
+        std::cout << depthMap[i] << "\n";
+    }
+    cv::imwrite("test.png", map);
+    std::cout << depthMap[0] << "\n";
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<nanoseconds>(stop - start);
+    std::cout << duration.count() / 1000000000.0 << "\n";
 
 
 }

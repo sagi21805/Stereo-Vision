@@ -20,6 +20,7 @@ class Stereo {
         uint32_t windowsPerCol;
         uint32_t windowsPerRow;
         std::vector<bool> canMatchWindow; 
+        int count;
 
     Stereo() = default;
 
