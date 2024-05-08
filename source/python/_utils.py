@@ -5,7 +5,7 @@ import ctypes
 WINDOWS = [
     np.zeros((2864, 1924), dtype=np.uint8),
     np.zeros((2864, 1924), dtype=np.uint8),
-]
+]   
 
 
 def get_camera(index: int) -> cv2.VideoCapture:
@@ -32,3 +32,11 @@ def get_test_arr(window_number):
     WINDOWS[window_number] = np.arange(100).reshape((10, 10)).astype(np.uint8)
     return WINDOWS[window_number]
 
+def write_img(name, img):
+    cv2.imwrite(name, img)
+
+def show_ptr(ptr: int, rows, cols):
+    data_pointer = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_float))
+    arr = np.ctypeslib.as_array(data_pointer, shape = (rows, cols))
+    print(arr)
+    cv2.imshow("map", arr)
