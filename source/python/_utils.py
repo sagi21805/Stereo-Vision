@@ -7,14 +7,13 @@ WINDOWS = [
     np.zeros((2864, 1924), dtype=np.uint8),
 ]   
 
-
-def get_camera(index: int) -> cv2.VideoCapture:
-    return cv2.VideoCapture(index)
-
+def get_camera(index) -> cv2.VideoCapture:
+    cap = cv2.VideoCapture(index)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
+    return cap
 
 def read_image(path: str):
     return cv2.imread(path)
-
 
 def get_window_view(img: np.ndarray, window_size: int, window_number: int):
     global WINDOWS
@@ -40,3 +39,4 @@ def show_ptr(ptr: int, rows, cols):
     arr = np.ctypeslib.as_array(data_pointer, shape = (rows, cols))
     print(arr)
     cv2.imshow("map", arr)
+    
