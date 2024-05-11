@@ -6,18 +6,26 @@ import time
 
 
 fn main() raises:
-    var cam1 = Camera(2, Size[DType.uint32](1280, 720), 1758.38)
-    var cam2 = Camera(0, Size[DType.uint32](1280, 720), 1758.38)
-    # var cam1 = Camera(Size[DType.uint32](2864, 1924), 2945.377)
-    # var cam2 = Camera(Size[DType.uint32](2864, 1924), 2945.377)
     var baseLine: Float32 = 60.89  # mm
-    var stereo = Stereo[2](cam1, cam2, baseLine)
-   
-   
+    var focal_length: Float32 = 2945.377
+    alias first_cam_index = 0
+    alias second_cam_index = 2
+    alias window_size = 2
+
+    var stereo = Stereo[first_cam_index, second_cam_index, window_size, frame_width = 640, frame_height = 480](
+        focal_length, focal_length, baseLine
+    )
+
+    Python.add_to_path("./source/python")
+    var py = Python.import_module("_utils")
     while True:
-        stereo.generate_disparity_map()
-        stereo.cv2.imwrite("1.png", stereo.frame1)
-        stereo.cv2.imwrite("2.png", stereo.frame2)
-        stereo.cv2.imwrite("3.png", stereo.depth_map_array)
-        time.sleep(0.5)
-        print("iter")
+        stereo.write_frames()
+        var t = now()
+        stereo.generate_disparity_map[is_fake= False]()
+        print((now() - t) / 1000000000)
+        py.write_ptr(
+            stereo.depth_map.address.__int__(),
+            stereo.windows_per_row.__int__(),
+            stereo.windows_per_col.__int__(),
+        )
+        time.sleep(0.01)

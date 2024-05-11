@@ -7,87 +7,128 @@ import time
 from memory import memset_zero
 
 
-struct Stereo[window_size: Int, elements_per_window:Int = window_size*window_size
-             ,first_window: Int = 0, second_window: Int = 1]:
-    alias pi_over_2 = 1.57079632679489661923
-    var cam1: Camera
-    var cam2: Camera
-    var frame1: numpy_array
-    var frame2: numpy_array
-    var frame1_windowed_view: DTypePointer[DType.uint8]
-    var frame2_windowed_view: DTypePointer[DType.uint8]
+struct Stereo[
+    first_camera_index: UInt32,
+    second_camera_index: UInt32,
+    window_size: Int,
+    auto_exposure: Bool = True,
+    exposure: Int = 157,
+    brightness: Int = 0,
+    contrast: Int = 32,
+    saturation: Int = 90,
+    gain: Int = 0,
+    frame_width: Int = 1280,
+    frame_height: Int = 720,
+    fake1: StringLiteral = "",
+    fake2: StringLiteral = "",
+]:
+    var cam1: Camera[
+        first_camera_index,
+        auto_exposure,
+        exposure,
+        brightness,
+        contrast,
+        saturation,
+        gain,
+        frame_width,
+        frame_height,
+        fake1,
+    ]
+
+    var cam2: Camera[
+        second_camera_index,
+        auto_exposure,
+        exposure,
+        brightness,
+        contrast,
+        saturation,
+        gain,
+        frame_width,
+        frame_height,
+        fake2,
+    ]
+
     var base_line: Float32  # mm
-    var windows_per_row: Int # how many windows are at the small size of the frame
-    var windows_per_col: Int # how many window are at the big size of the frame
+    var windows_per_row: Int  # how many windows are at the small size of the frame
+    var windows_per_col: Int  # how many window are at the big size of the frame
+
+    var frame1_windowed: DTypePointer[DType.uint8]
+    var frame2_windowed: DTypePointer[DType.uint8]
+
     var can_match: DTypePointer[DType.bool]
     var depth_map: DTypePointer[DType.float32]
-    var np: python_lib
-    var ctypes: python_lib
-    var cv2: python_lib
-    var python_utils: python_lib
-    var depth_map_array: numpy_array
 
     fn __init__(
         inout self,
-        cam1: Camera,
-        cam2: Camera,
+        focal_length1: Float32,
+        focal_length2: Float32,
         base_line: Float32,
     ) raises:
-        Python.add_to_path("source/python/")
-        self.python_utils = Python.import_module("_utils")
-        self.cam1 = cam1
-        self.cam2 = cam2
-        #self.frame1 = python_utils.read_image("data/im0-min.jpeg")
-        #self.frame2 = python_utils.read_image("data/im1-min.jpeg")
-        self.frame1 = self.cam1.get_frame()
-        self.frame2 = self.cam2.get_frame()
-        # python_utils.write_img("1.png", self.frame1)
-        # python_utils.write_img("2.png", self.frame2)
-        self.frame1_windowed_view = get_window_view[
-            self.window_size, self.first_window
-        ](self.frame1, self.python_utils)
-        self.frame2_windowed_view = get_window_view[
-            self.window_size, self.second_window
-        ](self.frame2, self.python_utils)
+        self.cam1 = Camera[
+            first_camera_index,
+            auto_exposure,
+            exposure,
+            brightness,
+            contrast,
+            saturation,
+            gain,
+            frame_width,
+            frame_height,
+            fake1,
+        ](focal_length1)
+
+        self.cam2 = Camera[
+            second_camera_index,
+            auto_exposure,
+            exposure,
+            brightness,
+            contrast,
+            saturation,
+            gain,
+            frame_width,
+            frame_height,
+            fake2,
+        ](focal_length2)
+
         self.base_line = base_line
-        
-        self.windows_per_col = self.cam1.frame_size.width().__int__() // window_size
-        self.windows_per_row = self.cam1.frame_size.height().__int__() // window_size
+
+        self.windows_per_col = (
+            self.cam1.frame_size.width().__int__() // window_size
+        )
+        self.windows_per_row = (
+            self.cam1.frame_size.height().__int__() // window_size
+        )
+
+        self.frame1_windowed = numpy_data_pointer_ui8(
+            self.cam1.cap.windowed_frame
+        )
+        self.frame2_windowed = numpy_data_pointer_ui8(
+            self.cam2.cap.windowed_frame
+        )
 
         self.can_match = DTypePointer[DType.bool].alloc(
             (self.windows_per_col * self.windows_per_row).__int__()
         )
-        memset_zero(
-            self.can_match,
-            (self.windows_per_col * self.windows_per_row).__int__())
 
         self.depth_map = DTypePointer[DType.float32].alloc(
-        (self.windows_per_row * self.windows_per_col).__int__())
+            (self.windows_per_row * self.windows_per_col).__int__()
+        )
 
-        self.np = Python.import_module("numpy")
-        self.ctypes = Python.import_module("ctypes")
-        self.cv2 = Python.import_module("cv2")
+    fn update[fake: Bool = False](inout self) raises:
+        @parameter  # if statement runs at compile time
+        if not fake:
+            self.cam1.update_frame()
+            self.cam2.update_frame()
 
-        var ptr = self.depth_map.address.__int__()
-        var data_pointer = self.ctypes.cast(ptr, self.ctypes.POINTER(self.ctypes.c_float))
-        self.depth_map_array = self.np.ctypeslib.as_array(
-            data_pointer,
-            shape=(
-                self.windows_per_row.__int__(),
-                self.windows_per_col.__int__()))
+            self.cam1.window_frame[self.window_size]()
+            self.cam2.window_frame[self.window_size]()
 
-
-    fn update(inout self) raises:
-        self.frame1 = self.cam1.get_frame()
-        self.frame2 = self.cam2.get_frame()
-
-        self.frame1_windowed_view = get_window_view[
-            self.window_size, self.first_window
-        ](self.frame1, self.python_utils)
-        self.frame2_windowed_view = get_window_view[
-            self.window_size, self.second_window
-        ](self.frame2, self.python_utils)
-
+            self.frame1_windowed = numpy_data_pointer_ui8(
+                self.cam1.cap.windowed_frame
+            )
+            self.frame2_windowed = numpy_data_pointer_ui8(
+                self.cam2.cap.windowed_frame
+            )
 
         memset_zero(
             self.can_match,
@@ -99,42 +140,37 @@ struct Stereo[window_size: Int, elements_per_window:Int = window_size*window_siz
         first_window_pose: Pose2d[DType.float32],
         second_window_pose: Pose2d[DType.float32],
     ) -> Float32:
-
         var angle_from_cam1 = self.cam1.angle_to_camera(first_window_pose)
         var angle_from_cam2 = self.cam2.angle_to_camera(second_window_pose)
-    
 
-        var angle_A: Float32 = self.pi_over_2 + (
+        var angle_A: Float32 = pi_over_2 + (
             self.cam1.fov.horizontal() / 2
         ) - angle_from_cam1.horizontal()
 
-        var angle_B: Float32 = self.pi_over_2 - (
+        var angle_B: Float32 = pi_over_2 - (
             self.cam2.fov.horizontal() / 2
         ) + angle_from_cam2.horizontal()
 
         var angle_C: Float32 = angle_from_cam1.horizontal() - angle_from_cam2.horizontal()
 
-
         return (self.base_line * math.sin(angle_A) * math.sin(angle_B)) / (
-            math.sin(angle_C) * math.cos(angle_from_cam1.vertical()))
+            math.sin(angle_C) * math.cos(angle_from_cam1.vertical())
+        )
 
     fn windowMSE(
         inout self,
-        inout first_window_offset: UInt32,
-        inout second_window_offset: UInt32,
+        inout first_window_offset: Int32,
+        inout second_window_offset: Int32,
     ) -> UInt32:
-
-        var first = self.frame1_windowed_view.load[
-            width = elements_per_window
+        var first = self.frame1_windowed.load[
+            width = window_size * window_size
         ](first_window_offset)
-        
-        var second = self.frame2_windowed_view.load[
-            width = elements_per_window
+
+        var second = self.frame2_windowed.load[
+            width = window_size * window_size
         ](second_window_offset)
 
         return math.abs(first - second).cast[DType.uint32]().reduce_add[1]()
-        
-        
 
     fn matching_window_position(
         inout self, inout matched_window_pose: Pose2d[DType.float32]
@@ -143,19 +179,18 @@ struct Stereo[window_size: Int, elements_per_window:Int = window_size*window_siz
         var error: UInt32 = UInt32.MAX
 
         var row_offset = matched_window_pose.row().cast[
-            DType.uint32
+            DType.int32
         ]() * self.cam1.frame_size.width() * window_size
 
         var matched_window_offset = row_offset + matched_window_pose.col().cast[
-            DType.uint32]() * elements_per_window
+            DType.int32
+        ]() * window_size * window_size
 
         for col in range(
             0,
-            self.windows_per_col * elements_per_window,
-            elements_per_window,
+            self.windows_per_col * window_size * window_size,
+            window_size * window_size,
         ):
-            # print(self.windows_per.col())
-
             var current_window_offset = row_offset + col
 
             var current_error = self.windowMSE(
@@ -165,17 +200,16 @@ struct Stereo[window_size: Int, elements_per_window:Int = window_size*window_siz
                 current_error < error
                 and not self.can_match[current_window_offset]
             ):
-                matching_col = col // elements_per_window
+                matching_col = col // (window_size * window_size)
                 error = current_error
 
             if error < 7:
                 break
-        
 
         self.can_match[
             matched_window_pose.row().cast[DType.uint32]()
             * self.windows_per_col
-            + (matching_col // elements_per_window)
+            + (matching_col // (window_size * window_size))
         ] = True
 
         return Pose2d[DType.float32](
@@ -183,11 +217,13 @@ struct Stereo[window_size: Int, elements_per_window:Int = window_size*window_siz
             matching_col.cast[DType.float32](),
         )
 
+    fn write_frames(inout self) raises:
+        self.cam1.write_frame()
+        self.cam2.write_frame()
 
-    fn generate_disparity_map(inout self) raises:
-        
+    fn generate_disparity_map[is_fake: Bool = False](inout self) raises:
+        self.update[is_fake]()
 
-        self.update()
         for img_row in range(self.windows_per_row):
             for col in range(self.windows_per_col):
                 var current_pose = Pose2d[DType.float32](img_row, col)
@@ -195,22 +231,10 @@ struct Stereo[window_size: Int, elements_per_window:Int = window_size*window_siz
                     current_pose
                 )
 
-                var depth = matched_window_pose.col() - current_pose.col()
-                
+                var depth = current_pose.col() - matched_window_pose.col()
                 self.depth_map[
                     img_row * self.windows_per_col.__int__() + col
                 ] = depth
                 # var depth: Float32 = stereo.get_depth[pi_over_2](
                 #     current_pose, matched_window_pose
                 # )
-	
-		
-
-        # print(numpy_array)
-        # cv2.imshow("first image", stereo.frame1)
-        # cv2.imshow("second image", stereo.frame2)
-        
-        # cv2.imshow("map", numpy_array)
-        # cv2.waitKey(1)
-        
-

@@ -13,22 +13,30 @@ class Camera:
                 saturation: int = 90,
                 gain: int = 0,
                 frame_width: int = 1280,
-                frame_height: int = 720):
+                frame_height: int = 720, 
+                fake: str = ""
+                ):
         
-        self.cap = Camera.initialize_cap(
-                      index, 
-                      auto_exposure, 
-                      exposure, 
-                      brightness, 
-                      contrast, 
-                      saturation, 
-                      gain, 
-                      frame_width, 
-                      frame_height
-                    )
-        
+        if fake == "":
+            self.cap = Camera.initialize_cap(
+                        index, 
+                        auto_exposure, 
+                        exposure, 
+                        brightness, 
+                        contrast, 
+                        saturation, 
+                        gain, 
+                        frame_width, 
+                        frame_height
+                        )
+            self.warm()
+            
+        else:        
+            self.cap = cv2.VideoCapture()
+            self.frame = cv2.imread(fake)
+            
         self.index = index
-        self.warm()
+        self.window_frame(2)
         
 
     def update_frame(self):
@@ -48,8 +56,6 @@ class Camera:
                 frame_height: int = 720) -> None:
         
         cap = cv2.VideoCapture(index)
-        print(frame_width)
-        print(frame_height)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
         cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3 - (not auto_exposure).__int__()*2)
         cap.set(cv2.CAP_PROP_EXPOSURE, exposure)
@@ -63,12 +69,13 @@ class Camera:
         return cap
         
     def window_frame(self, window_size):
-        
-        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        if self.frame.ndim == 3:
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
         
         self.windowed_frame = np.lib.stride_tricks \
               .sliding_window_view(self.frame, (window_size, window_size)) \
               [::window_size, ::window_size].copy()
+        
               
     def warm(self):
         for _ in range(10):
@@ -76,3 +83,12 @@ class Camera:
               
     def write_frame(self):
         cv2.imwrite(f"camera{self.index}.png", self.frame)
+        
+    def set_exposure(self, exposure: int):
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, exposure)
+        
+    def set_auto_exposure(self, val: bool):
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3 - (not val).__int__()*2)
+
+
+        

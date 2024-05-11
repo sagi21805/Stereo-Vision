@@ -3,6 +3,7 @@
 alias numpy_array = PythonObject
 alias video_capture = PythonObject
 alias python_lib = PythonObject
+alias pi_over_2 = 1.57079632679489661923
 
 
 fn numpy_data_pointer_ui8(
@@ -31,17 +32,6 @@ fn numpy_data_pointer(
             ).value
         )
     )
-
-
-fn get_window_view[
-    window_size: Int, window_number: Int
-](img: PythonObject, python_utils: PythonObject) raises -> DTypePointer[
-    DType.uint8
-]:
-    return numpy_data_pointer_ui8(
-        python_utils.get_window_view(img, window_size, window_number)
-    )
-
 
 struct FOV[type: DType]:
     var fov: SIMD[type, 2]
