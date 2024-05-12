@@ -64,6 +64,9 @@ struct Camera[
     fn window_frame[window_size: Int](inout self) raises:
         self.cap.window_frame(window_size)
 
+    fn window_colored_frame[window_size: Int](inout self) raises:
+        self.cap.window_colored_frame(window_size)
+
     fn write_frame(inout self) raises:
         self.cap.write_frame()
 

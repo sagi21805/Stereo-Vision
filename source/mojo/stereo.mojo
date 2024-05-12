@@ -11,6 +11,7 @@ struct Stereo[
     first_camera_index: UInt32,
     second_camera_index: UInt32,
     window_size: Int,
+    colored: Bool, 
     auto_exposure: Bool = True,
     exposure: Int = 157,
     brightness: Int = 0,
@@ -120,8 +121,13 @@ struct Stereo[
             self.cam1.update_frame()
             self.cam2.update_frame()
 
-            self.cam1.window_frame[self.window_size]()
-            self.cam2.window_frame[self.window_size]()
+            @parameter # if statement runs at compile time
+            if self.colored:
+                self.cam1.window_colored_frame[self.window_size]()
+                self.cam2.window_colored_frame[self.window_size]()
+            else:
+                self.cam1.window_frame[self.window_size]()
+                self.cam2.window_frame[self.window_size]()
 
             self.frame1_windowed = numpy_data_pointer_ui8(
                 self.cam1.cap.windowed_frame
@@ -222,8 +228,11 @@ struct Stereo[
         self.cam2.write_frame()
 
     fn generate_disparity_map[is_fake: Bool = False](inout self) raises:
-        self.update[is_fake]()
 
+        var t = now()
+        self.update[is_fake]()
+        print("update time: ",(now() - t) / 1000000000)
+        t = now()
         for img_row in range(self.windows_per_row):
             for col in range(self.windows_per_col):
                 var current_pose = Pose2d[DType.float32](img_row, col)
@@ -238,3 +247,5 @@ struct Stereo[
                 # var depth: Float32 = stereo.get_depth[pi_over_2](
                 #     current_pose, matched_window_pose
                 # )
+        print("disparity time: ",(now() - t) / 1000000000)
+        print("")

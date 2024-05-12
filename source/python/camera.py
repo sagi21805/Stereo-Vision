@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 
-from time import sleep
+from numba import njit, prange
 
 class Camera:
     
@@ -34,6 +34,8 @@ class Camera:
         else:        
             self.cap = cv2.VideoCapture()
             self.frame = cv2.imread(fake)
+            self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            self.bgra = cv2.cvtColor(self.frame, cv2.COLOR_BGR2BGRA)
             
         self.index = index
         self.window_frame(2)
@@ -42,6 +44,8 @@ class Camera:
     def update_frame(self):
         success, frame = self.cap.read()
         self.frame = frame if success else np.empty(0)
+        self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        self.bgra = cv2.cvtColor(self.frame, cv2.COLOR_BGR2BGRA)
         
     @staticmethod
     def initialize_cap(
@@ -69,13 +73,27 @@ class Camera:
         return cap
         
     def window_frame(self, window_size):
-        if self.frame.ndim == 3:
-            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-        
         self.windowed_frame = np.lib.stride_tricks \
-              .sliding_window_view(self.frame, (window_size, window_size)) \
+              .sliding_window_view(self.gray, (window_size, window_size)) \
               [::window_size, ::window_size].copy()
+    
+    @njit
+    def window_colored_frame(self, window_size):
+        windowed_arr: np.ndarray = np.lib.stride_tricks \
+                    .sliding_window_view(self.bgra, (window_size, window_size, 4)) \
+                    [::window_size, ::window_size].copy()
+        windowed_arr = windowed_arr.reshape((windowed_arr.shape[0], windowed_arr.shape[1],window_size,window_size,4))
+
+        windowed = np.empty((windowed_arr.size, ), dtype=np.uint8)
+
+        size = windowed_arr[0].flatten().shape[0]
+
+        for j in prange(windowed_arr.shape[0]):
+            for i in prange(windowed_arr.shape[1]):
+                windowed[i+size*j:size*(j+1):windowed_arr.shape[1]] = windowed_arr[j][i].flatten()
         
+        self.windowed_frame = windowed.copy()
+
               
     def warm(self):
         for _ in range(10):
