@@ -39,7 +39,7 @@ struct Camera[
             frame_height,
             fake,
         )
-        
+
         self.focal_length = focal_length
 
         self.frame_size = Size[DType.int32](
@@ -61,11 +61,15 @@ struct Camera[
     ) -> FOV[DType.float32]:
         return FOV[DType.float32](self.ratio * position.pose)
 
-    fn window_frame[window_size: Int](inout self) raises:
-        self.cap.window_frame(window_size)
+    fn window_gray[window_size: Int](inout self) raises:
+        self.cap.window_gray(window_size)
 
-    fn window_colored_frame[window_size: Int](inout self) raises:
-        self.cap.window_colored_frame(window_size)
+    fn window_bgra[window_size: Int](inout self) raises:
+        self.cap.window_bgra(window_size)
+
+    fn special_window_bgra[window_size: Int](inout self) raises:
+        self.cap.window_bgra(window_size)
+        self.cap.specical_window_bgra()
 
     fn write_frame(inout self) raises:
         self.cap.write_frame()
