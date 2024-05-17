@@ -1,9 +1,12 @@
-# TODO understand how to make better
+import math
 
 alias numpy_array = PythonObject
 alias video_capture = PythonObject
 alias python_lib = PythonObject
 alias pi_over_2 = 1.57079632679489661923
+alias UINT8_C = 0
+alias UINT_C = 1
+alias FLOAT32_C = 2
 
 
 fn numpy_data_pointer_ui8(
@@ -19,6 +22,36 @@ fn numpy_data_pointer_ui8(
         )
     )
 
+fn numpy_data_pointer_ui32(
+    numpy_array: PythonObject,
+) raises -> DTypePointer[DType.uint32]:
+    return DTypePointer[DType.uint32](
+        __mlir_op.`pop.index_to_pointer`[
+            _type = __mlir_type.`!kgen.pointer<scalar<ui32>>`
+        ](
+            SIMD[DType.index, 1](
+                numpy_array.__array_interface__["data"][0].__index__()
+            ).value
+        )
+    )
+
+
+# potintial big imporvement, there may be copying on the return
+fn repeat_elements[
+   v_size: Int, times: Int
+](p: DTypePointer[DType.uint32], python_utils: python_lib, ) raises -> SIMD[DType.uint32, v_size * times]:
+    var arr = python_utils.ptr_to_numpy( p.address.__int__(), UINT8_C, (v_size,))
+    var simd = numpy_data_pointer_ui32(
+        python_utils.repeat_elements(
+           arr, times
+        )
+    ).load[width=v_size * times]()
+    return simd
+
+
+fn closet_power_of_2[number: SIMD[DType.int32, 1]]() -> Int:
+    return math.pow[DType.int32, 1](2, math.ceil(math.log2(number))).__int__()
+
 
 fn numpy_data_pointer(
     numpy_array: PythonObject,
@@ -32,6 +65,7 @@ fn numpy_data_pointer(
             ).value
         )
     )
+
 
 struct FOV[type: DType]:
     var fov: SIMD[type, 2]
