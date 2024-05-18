@@ -74,8 +74,11 @@ class Camera:
 
     @njit(fastmath = True, parallel = True)
     def window_bgra(self, window_size):
+        pad_offset = _utils.closet_power_of_2(self.bgra.shape[1]) - self.bgra.shape[1]
+        padded = np.pad(self.bgra, ((0, 0), (0, pad_offset), (0, 0)), 'constant')
+
         self.windowed_frame = np.lib.stride_tricks.sliding_window_view(
-            self.bgra, (window_size, window_size, 4)
+            padded, (window_size, window_size, 4)
         )[::window_size, ::window_size].copy()
         self.windowed_frame = self.windowed_frame.reshape((
                 self.windowed_frame.shape[0],
@@ -90,20 +93,17 @@ class Camera:
     def special_window_bgra(self):
        
         size = self.windowed_frame[0].flatten().shape[0]
-        rounded = _utils.closet_power_of_2(size)
-
         self.special_windowed_frame = np.empty(
-            (self.windowed_frame.size + (self.windowed_frame.shape[0] * (rounded - size)),),
+            (self.windowed_frame.size, ),
             dtype=np.uint8,
         )
         for row in prange(self.windowed_frame.shape[0]):
             for col in prange(self.windowed_frame.shape[1]):
                 self.special_windowed_frame[
                     col
-                    + row * rounded : size
-                    + row * rounded : self.windowed_frame.shape[1]
+                    + row * size : 
+                    size + (row + 1) : self.windowed_frame.shape[1]
                 ] = self.windowed_frame[row][col].flatten()
-            self.special_windowed_frame[size + row * rounded : (row + 1) * (rounded)] = 0
 
 
     def warm(self):
