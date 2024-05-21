@@ -116,10 +116,11 @@ fn repeat_elements_f32[
     return simd
 
 
-fn closet_power_of_2[number: SIMD[DType.int32, 1]]() -> Int:
+fn closet_power_of_2[number: Int]() -> Int:
     return math.pow[DType.int32, 1](
-        2, math.ceil(math.log2[type = DType.int32, simd_width=1](number))
-    ).__int__()
+        2, 
+        math.log2(SIMD[DType.float32, 1](number)).__int__() + 1).__int__()
+
 
 
 fn numpy_data_pointer(
