@@ -67,9 +67,15 @@ struct Camera[
     fn window_bgra[window_size: Int](inout self) raises:
         self.cap.window_bgra(window_size)
 
-    fn special_window_bgra[window_size: Int](inout self) raises:
-        self.cap.window_bgra(window_size)
-        self.cap.specical_window_bgra()
+    fn sort_windowed_bgrabgra[window_size: Int](inout self) raises:
+        self.cap.sort_windowed_bgrabgra(window_size)
+
+    fn sort_windowed_bbggrraa[
+        window_size: Int, windows_per_row: Int, windows_per_col: Int
+    ](inout self) raises:
+        self.cap.sort_windowed_bbggrraa(
+            window_size, windows_per_row, windows_per_col
+        )
 
     fn write_frame(inout self) raises:
         self.cap.write_frame()
