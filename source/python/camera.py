@@ -1,8 +1,6 @@
 import numpy as np
 import cv2
-from numba import njit, prange
 import _utils
-
 
 class Camera:
     def __init__(
@@ -38,8 +36,7 @@ class Camera:
             self.bgra = cv2.cvtColor(self.frame, cv2.COLOR_BGR2BGRA)
 
         self.index = index
-        self.elements_per_pixel = 4 # b, g, r, a
-        self.window_frame(2)
+        self.elements_per_pixel = 4  # b, g, r, a
 
     def update_frame(self):
         success, frame = self.cap.read()
@@ -73,77 +70,25 @@ class Camera:
 
         return cap
 
-    @njit
     def window_bgra(self, window_size):
-        pad_offset_cols = (
-            _utils.closet_power_of_2(self.bgra.shape[1]) - self.bgra.shape[1]
-        )
-        padded = np.pad(
-            self.bgra, ((0, 0), (0, pad_offset_cols), (0, 0)), 'constant', constant_values=255
-        )
-        pad_offset_rows = (
-            _utils.closet_power_of_2(self.bgra.shape[0]) - self.bgra.shape[0]
-        )
-        padded = np.pad(
-            padded, ((0, pad_offset_rows), (0, 0), (0, 0)), 'constant', constant_values=255
-        )
-        self.windowed_frame = np.lib.stride_tricks.sliding_window_view(
-            padded, (window_size, window_size, 4)
-        )[::window_size, ::window_size].copy()
-        self.windowed_frame = self.windowed_frame.reshape(
-            (
-                self.windowed_frame.shape[0],
-                self.windowed_frame.shape[1],
-                window_size,
-                window_size,
-                4,  # bgra
-            )
-        )
-    
-    @njit(fastmath=True, parallel=True)
-    def sort_windowed_bbrrggaa(
+        self.windowed_frame = _utils.window_bgra(_utils.pad_array(self.bgra), window_size)
+
+    # @njit(fastmath=True, parallel=True)
+    def sort_windowed_bbggrraa(
         self, 
-        window_size: int,
-        windows_per_row: int,
-        windows_per_col: int 
-        ):
+        window_size: int, 
+        windows_per_row: int, 
+        windows_per_col: int
+    ):
         self.sort_windowed_bgrabgra(window_size)
+        self.bbggrraa = _utils.sort_windowed_bbggrraa(self.bgrabgra, window_size, windows_per_row, windows_per_col)
+        
 
-        self.bbrrggaa = np.empty((self.bgrabgra.size,),dtype=np.uint8,)
-
-        for window_element in prange(window_size*window_size):
-            for row in prange(windows_per_col):
-                for col in prange(windows_per_row):
-                    total_row_elements = windows_per_row * self.elements_per_pixel
-                    self.bbrrggaa[col + (row + window_element*windows_per_col) * total_row_elements
-                    :((row+1) + window_element*windows_per_col) * total_row_elements
-                    :windows_per_row
-                    ] = self.bgrabgra[col+(row+window_element*windows_per_col) * windows_per_row]
-
-    @njit(fastmath=True, parallel=True)
     def sort_windowed_bgrabgra(self, window_size):
-
         self.window_bgra(window_size)
+        self.bgrabgra = _utils.sort_windowed_bgrabgra(self.windowed_frame, window_size)
 
-        elements_per_window = 4 # b, g, r, a
-    
-        self.bgrabgra = np.empty(
-            (self.windowed_frame.size // elements_per_window, elements_per_window),
-            dtype=np.uint8,
-        )
-
-        self.windowed_frame = self.windowed_frame.reshape(
-            (
-                self.windowed_frame.shape[0] * self.windowed_frame.shape[1],
-                window_size * window_size,
-                elements_per_window,
-            )
-        )
-
-        for window in prange(self.windowed_frame.shape[0]):
-            self.bgrabgra[window : self.bgrabgra.shape[0] : self.windowed_frame.shape[0]] = self.windowed_frame[window]
-
-
+   
     def warm(self):
         for _ in range(10):
             self.update_frame()
