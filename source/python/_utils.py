@@ -70,30 +70,26 @@ def sort_windowed_bgrabgra(
     window_size: int,
     wpr_padded: int,
     wpc_padded: int,
-    out_arr: np.ndarray
+    out_arr: np.ndarray,
 ):
     # 4 is elements per window (r, g, b, a)
 
-    c = np.empty((windowed_frame.size // 4, 4), dtype=np.uint8)
     windowed_frame = windowed_frame.reshape(
         (
-            windowed_frame.shape[0] * windowed_frame.shape[1],
+            wpr_padded * wpc_padded,
             window_size * window_size,
             4,
         )
     )
-    
+
     per_row_offset = wpr_padded * window_size * window_size
-    
+
     for row in prange(wpc_padded):
         for col in prange(wpr_padded):
             out_arr[
-                col + per_row_offset * row : 
-                per_row_offset * (row + 1) : 
-                wpr_padded
+                col
+                + per_row_offset * row : per_row_offset * (row + 1) : wpr_padded
             ] = windowed_frame[col + row * wpr_padded]
-
-    return c
 
 
 @njit(fastmath=True, parallel=True)
