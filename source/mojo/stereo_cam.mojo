@@ -1,43 +1,34 @@
 import math
 from python import Python
 from source.mojo._utils import *
+from source.mojo.cam_settings import *
+from source.mojo.cam_parameters import *
 
-alias PythonCam = PythonObject
+alias PyStereoCam = PythonObject
 
 
 @value
-struct Camera[
+struct StereoCam[
     index: UInt32,
-    auto_exposure: Bool = True,
-    exposure: Int = 157,
-    brightness: Int = 0,
-    contrast: Int = 32,
-    saturation: Int = 90,
-    gain: Int = 0,
-    frame_width: Int = 1280,
-    frame_height: Int = 720,
-    fake: StringLiteral = "",
+    settings: CamSettings,
+    parameters: CamParameters,
+    window_size: Int,
+    elements_per_pixel: Int = 4 # b, g, r, a
 ]:
-    var cap: PythonCam
+
+    var cap: PyStereoCam
     var focal_length: Float32  # In Pixels
-    var fov: FOV[DType.float32]  # In Radians
+    var fov: FOV[DType.float32]  
     var ratio: SIMD[DType.float32, 2]
     var frame_size: Size[DType.int32]
 
     fn __init__(inout self, focal_length: Float32) raises:
         Python.add_to_path("source/python")
-        var Camera = Python.import_module("camera")
-        self.cap = Camera.Camera(
-            index,
-            auto_exposure,
-            exposure,
-            brightness,
-            contrast,
-            saturation,
-            gain,
-            frame_width,
-            frame_height,
-            fake,
+        var stereo_cam_module = Python.import_module("stereo_cam") 
+        var settings_module = Python.import_module("cam_settings")
+        
+        self.cap = stereo_cam_module.StereoCam(
+            index, CamSettings.to_python(settings, settings_module)
         )
 
         self.focal_length = focal_length
@@ -61,24 +52,16 @@ struct Camera[
     ) -> FOV[DType.float32]:
         return FOV[DType.float32](self.ratio * position.pose)
 
-    fn window_gray[window_size: Int](inout self) raises:
-        self.cap.window_gray(window_size)
 
     fn window_bgra[window_size: Int](inout self) raises:
         self.cap.window_bgra(window_size)
 
-    fn sort_windowed_bgrabgra[window_size: Int](inout self) raises:
-        self.cap.sort_windowed_bgrabgra(window_size)
+    fn sort_windowed_bgrabgra(
+        inout self, window_size: Int, wpr_padded: Int, wpc_padded: Int) raises:
+        self.cap.sort_windowed_bgrabgra(window_size, wpr_padded, wpc_padded)
 
-    fn sort_windowed_bbggrraa[
-        window_size: Int, windows_per_row: Int, windows_per_col: Int
-    ](inout self) raises:
-        self.cap.sort_windowed_bbggrraa(
-            window_size, windows_per_row, windows_per_col
-        )
-
-    fn write_frame(inout self) raises:
-        self.cap.write_frame()
+    fn sort_windowed_bbggrraa(inout self) raises:
+        self.cap.sort_windowed_bbggrraa()
 
     fn update_frame(inout self) raises:
         self.cap.update_frame()
