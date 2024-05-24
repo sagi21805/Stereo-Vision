@@ -18,11 +18,11 @@ class Camera:
 
     def get_frame(self):
         success, frame = self.cap.read()
-        return frame if success else np.empty(0)
+        return frame if success else np.empty((0, ))
 
     def warm(self):
         for _ in range(10):
-            self.update_frame()
+            self.get_frame()
 
     def set_exposure(self, exposure: int):
         self.cap.set(cv2.CAP_PROP_EXPOSURE, exposure)
