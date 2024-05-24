@@ -1,5 +1,5 @@
-from source.python.cam_settings import CamSettings
-from source.python.camera import Camera
+from cam_settings import CamSettings
+from camera import Camera
 from _utils import closet_power_of_2
 import array_tricks as tricks
 import numpy as np
@@ -16,9 +16,8 @@ class StereoCam(Camera):
         
         super().__init__(index, settings)
 
-        self.frame = self.get_frame()
-        self.bgra = cv2.cvtColor(self.frame, cv2.COLOR_BGR2BGRA)
-        self.windowed = np.empty()
+        self.update_frame()
+        self.windowed = np.empty((0, ))
         self.bgrabgra = np.empty((closet_power_of_2(settings.frame_width)
                                 * closet_power_of_2(settings.frame_height) 
                                 * window_size 
@@ -30,7 +29,12 @@ class StereoCam(Camera):
                                 * window_size
                                 * window_size
                                 * elements_per_pixel, ))
+        
+        self.test = np.array([1, 2, 3], dtype=np.uint8)
 
+    def update_frame(self):
+        self.frame = self.get_frame()
+        self.bgra = cv2.cvtColor(self.frame, cv2.COLOR_BGR2BGRA)
 
     def window_bgra(self, window_size):
         self.windowed = tricks.window_bgra(
@@ -38,7 +42,6 @@ class StereoCam(Camera):
         )
 
     def sort_windowed_bgrabgra(self, window_size, wpr_padded: int, wpc_padded: int):
-        self.window_bgra(window_size)
         tricks.sort_windowed_bgrabgra(
             self.windowed, window_size, wpr_padded, wpc_padded, self.bgrabgra
         )
@@ -47,4 +50,7 @@ class StereoCam(Camera):
         tricks.sort_windowed_bbggrraa(
             self.windowed, self.bbggrraa
         )
+
+    def test_p(self):
+        self.test[0] = 9
    
