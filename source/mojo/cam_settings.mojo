@@ -4,26 +4,26 @@ from source.mojo._utils import *
 @value
 struct CamSettings:
 
+    var frame_width: Int
+    var frame_height: Int
     var auto_exposure: Bool
     var exposure: Int
     var brightness: Int
     var contrast: Int
     var saturation: Int
     var gain: Int
-    var frame_width: Int
-    var frame_height: Int
     var fake: StringLiteral
 
     fn __init__(
         inout self,
+        frame_width: Int = 1280,
+        frame_height: Int = 720,
         auto_exposure: Bool = True,
         exposure: Int = 157,
         brightness: Int = 0,
         contrast: Int = 32,
         saturation: Int = 90,
         gain: Int = 0,
-        frame_width: Int = 1280,
-        frame_height: Int = 720,
         fake: StringLiteral = ""
     ):
 
