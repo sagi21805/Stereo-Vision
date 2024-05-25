@@ -1,5 +1,6 @@
 from source.mojo._utils import FOV
 import math
+from source.mojo.cam_settings import CamSettings
 
 @value
 struct CamParameters:
@@ -16,8 +17,7 @@ struct CamParameters:
         inout self,
         focal_length_x: Int,
         focal_length_y: Int,
-        frame_width: Int,
-        frame_height: Int,
+        settings: CamSettings,
         center_x: Int = -1,
         center_y: Int = -1,
         ):
@@ -29,14 +29,14 @@ struct CamParameters:
         self.center_y = center_y
 
         self.horizontal_angle = 2 * math.atan[DType.float32, 1](
-            (SIMD[DType.float32, 1](frame_width))
+            (SIMD[DType.float32, 1](settings.frame_width))
         ) / (2 * focal_length_x)
 
         self.vertical_angle = 2 * math.atan(
-            SIMD[DType.float32, 1](frame_height)
+            SIMD[DType.float32, 1](settings.frame_height)
         ) / (2 * focal_length_y)
 
         self.angle_pixel_ratio = FOV[DType.float32](
-                self.horizontal_angle / frame_width,
-                self.vertical_angle / frame_height
+                self.horizontal_angle / settings.frame_width,
+                self.vertical_angle / settings.frame_height
         )
