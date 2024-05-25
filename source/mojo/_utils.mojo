@@ -1,4 +1,5 @@
 import math
+import memory
 
 alias numpy_array = PythonObject
 alias video_capture = PythonObject
@@ -66,54 +67,15 @@ fn numpy_data_pointer_f32(
     )
 
 
-fn repeat_elements_ui16[
-    v_size: Int, times: Int
-](
-    p: DTypePointer[DType.uint16],
-    python_utils: python_lib,
-) raises -> SIMD[
-    DType.uint16, v_size * times
-]:
-    var arr = python_utils.ptr_to_numpy(p.address.__int__(), UINT16, (v_size,))
-    var simd = numpy_data_pointer_ui16(
-        python_utils.repeat_elements(arr, times)
-    ).load[width = v_size * times]()
-    return simd
+fn repeat_elements[input_size: Int](
+    input_ptr: DTypePointer[DType.uint8], 
+    times: Int, 
+    out: DTypePointer[DType.uint8]
+    ):
 
-
-# potintial big imporvement, there may be copying on the return
-fn repeat_elements_ui32[
-    v_size: Int, times: Int
-](
-    p: DTypePointer[DType.uint32],
-    python_utils: python_lib,
-) raises -> SIMD[
-    DType.uint32, v_size * times
-]:
-    var arr = python_utils.ptr_to_numpy(
-        p.address.__int__(), UINT32_C, (v_size,)
-    )
-    var simd = numpy_data_pointer_ui32(
-        python_utils.repeat_elements(arr, times)
-    ).load[width = v_size * times]()
-    return simd
-
-
-fn repeat_elements_f32[
-    v_size: Int, times: Int
-](
-    p: DTypePointer[DType.float32],
-    python_utils: python_lib,
-) raises -> SIMD[
-    DType.float32, v_size * times
-]:
-    var arr = python_utils.ptr_to_numpy(
-        p.address.__int__(), FLOAT32_C, (v_size,)
-    )
-    var simd = numpy_data_pointer_f32(
-        python_utils.repeat_elements(arr, times)
-    ).load[width = v_size * times]()
-    return simd
+    @unroll
+    for element in range(input_size):
+        memory.memset(out + (element*times), input_ptr[element], times) 
 
 
 fn closet_power_of_2[number: Int]() -> Int:
