@@ -1,9 +1,11 @@
 from python import Python
 from source.mojo._utils import *
-from source.mojo.camera import Camera
+from source.mojo.stereo_cam import StereoCam
+from source.mojo.cam_settings import CamSettings
 import math
 from time import now
 import time
+from source.mojo.cam_parameters import CamParameters
 from memory import memset_zero
 
 
@@ -11,122 +13,73 @@ struct Stereo[
     first_camera_index: UInt32,
     second_camera_index: UInt32,
     window_size: Int,
-    auto_exposure: Bool = True,
-    exposure: Int = 157,
-    brightness: Int = 0,
-    contrast: Int = 32,
-    saturation: Int = 90,
-    gain: Int = 0,
-    frame_width: Int = 1280,
-    frame_height: Int = 720,
-    fake1: StringLiteral = "",
-    fake2: StringLiteral = "",
+    cam_settings: CamSettings,
+    elements_per_pixel: Int = 4
+    
 ]:
-    var cam1: Camera[
+    var cam1: StereoCam[
         first_camera_index,
-        auto_exposure,
-        exposure,
-        brightness,
-        contrast,
-        saturation,
-        gain,
-        frame_width,
-        frame_height,
-        fake1,
+        cam_settings,
+        window_size,
+        elements_per_pixel
     ]
 
-    var cam2: Camera[
+    var cam2: StereoCam[
         second_camera_index,
-        auto_exposure,
-        exposure,
-        brightness,
-        contrast,
-        saturation,
-        gain,
-        frame_width,
-        frame_height,
-        fake2,
+        cam_settings,
+        window_size,
+        elements_per_pixel
     ]
-
     var base_line: Float32  # mm
-
-    var frame1_bgrabgra_sum: DTypePointer[DType.uint16]
-
-    var frame2_bbggrraa_sum: DTypePointer[DType.uint16]
-
-    var helper_pointer: DTypePointer[DType.float32]
 
     var can_match: DTypePointer[DType.bool]
     var depth_map: DTypePointer[DType.float32]
     var python_utils: python_lib
 
-    alias frame_width_padded = closet_power_of_2[frame_width]()
-    
-    alias frame_height_padded = closet_power_of_2[frame_height]()
+    alias frame_width_padded = closet_power_of_2[cam_settings.frame_width]()
 
-    alias windows_per_row: Int = frame_width // window_size
+    alias frame_height_padded = closet_power_of_2[cam_settings.frame_height]()
 
-    alias windows_per_col: Int = frame_height // window_size
+    alias windows_per_row: Int = cam_settings.frame_width // window_size
+
+    alias windows_per_col: Int = cam_settings.frame_height // window_size
 
     alias window_per_row_padded: Int = closet_power_of_2[
-        frame_width
+        cam_settings.frame_width
     ]() // window_size
 
     alias window_per_col_padded: Int = closet_power_of_2[
-        frame_height
+        cam_settings.frame_height
     ]() // window_size
 
-    alias elements_per_pixel: Int = 4  # b, g, r, a
-
     alias items_to_load = closet_power_of_2[
-        frame_width
+        cam_settings.frame_width
     ]() * window_size * 4  # can't use self
 
     fn __init__(
         inout self,
-        focal_length1: Float32,
-        focal_length2: Float32,
         base_line: Float32,
+        parameters: CamParameters
     ) raises:
-        self.cam1 = Camera[
-            first_camera_index,
-            auto_exposure,
-            exposure,
-            brightness,
-            contrast,
-            saturation,
-            gain,
-            frame_width,
-            frame_height,
-            fake1,
-        ](focal_length1)
 
-        self.cam2 = Camera[
+        Python.add_to_path("source/python")
+        self.python_utils = Python.import_module("_utils")
+
+        self.cam1 = StereoCam[
+            first_camera_index,
+            cam_settings,
+            window_size,
+            elements_per_pixel
+        ](parameters)
+
+        self.cam2 = StereoCam[
             second_camera_index,
-            auto_exposure,
-            exposure,
-            brightness,
-            contrast,
-            saturation,
-            gain,
-            frame_width,
-            frame_height,
-            fake2,
-        ](focal_length2)
+            cam_settings,
+            window_size,
+            elements_per_pixel
+        ](parameters)
 
         self.base_line = base_line
-
-        self.frame1_bgrabgra_sum = DTypePointer[DType.uint16]().alloc(
-            self.window_per_row_padded * self.window_per_col_padded
-        )
-
-        self.frame2_bbggrraa_sum = DTypePointer[DType.uint16]().alloc(
-            self.window_per_row_padded * self.window_per_col_padded
-        )
-
-        self.helper_pointer = DTypePointer[DType.float32]().alloc(
-            window_size * window_size
-        )
 
         self.can_match = DTypePointer[DType.bool].alloc(
             (self.windows_per_col * self.windows_per_row).__int__()
@@ -135,10 +88,6 @@ struct Stereo[
         self.depth_map = DTypePointer[DType.float32].alloc(
             (self.windows_per_row * self.windows_per_col).__int__()
         )
-        Python.add_to_path("./source/python")
-        self.python_utils = Python.import_module("_utils")
-
-        print("init")
 
     fn update[fake: Bool = False](inout self) raises:
         @parameter  # if statement runs at compile time
@@ -146,49 +95,12 @@ struct Stereo[
             self.cam1.update_frame()
             self.cam2.update_frame()
 
-            self.cam1.sort_windowed_bgrabgra[window_size]()
+            self.cam1.window_bgra()
+            self.cam2.window_bgra()
 
-            var frame1_bgrabgra_sum = numpy_data_pointer_ui8(
-                self.cam1.cap.bgrabgra
-            ).load[
-                width = (
-                    self.frame_width_padded
-                    * self.frame_height_padded
-                    * self.elements_per_pixel 
-                )
-            ]().cast[DType.uint16]().reduce_add[
-                self.window_per_row_padded
-                * self.window_per_col_padded
-                * self.elements_per_pixel  
-            ]()
+            self.cam1.sort_windowed_bgrabgra(self.window_per_row_padded, self.window_per_col_padded)
 
-            var t = frame1_bgrabgra_sum.slice[4, offset = 0]()
-            print(t)
-            # print(fram)
-            # for i in range(100):
-            #     print(t[i], end = " ")
-            # print(frame1_bgrabgra_sum.size)
-            # self.frame1_bgrabgra_sum.store(0, frame1_bgrabgra_sum)
-
-            self.cam2.sort_windowed_bbggrraa[
-                self.window_size,
-                self.window_per_row_padded,
-                self.window_per_col_padded,
-            ]()
-
-            var frame2_bbggrraa_sum = numpy_data_pointer_ui8(
-                self.cam2.cap.bbggrraa
-            ).load[
-                width = (
-                    self.frame_width_padded
-                    * self.frame_height_padded
-                    * self.elements_per_pixel
-                )
-            ]().cast[DType.uint16]().reduce_add[
-                self.window_per_row_padded
-                * self.window_per_col_padded
-                * self.elements_per_pixel
-            ]()
+            self.cam2.sort_windowed_bbggrraa()
 
             # self.frame2_bbggrraa_sum.store(0, frame2_bbggrraa_sum)
 
@@ -308,9 +220,9 @@ struct Stereo[
 
     #     return Pose2d[DType.float32](0, 0)
 
-    fn write_frames(inout self) raises:
-        self.cam1.write_frame()
-        self.cam2.write_frame()
+    # fn write_frames(ino`ut self) raises:
+    #     self.cam1.write_frame()
+    #     self.cam2.write_frame()
 
     # fn generate_disparity_map[is_fake: Bool = False](inout self) raises:
     #     var t = now()
