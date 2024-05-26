@@ -25,77 +25,23 @@ fn numpy_data_pointer_ui8(
     )
 
 
-fn numpy_data_pointer_ui16(
-    numpy_array: PythonObject,
-) raises -> DTypePointer[DType.uint16]:
-    return DTypePointer[DType.uint16](
-        __mlir_op.`pop.index_to_pointer`[
-            _type = __mlir_type.`!kgen.pointer<scalar<ui16>>`
-        ](
-            SIMD[DType.index, 1](
-                numpy_array.__array_interface__["data"][0].__index__()
-            ).value
-        )
-    )
-
-
-fn numpy_data_pointer_ui32(
-    numpy_array: PythonObject,
-) raises -> DTypePointer[DType.uint32]:
-    return DTypePointer[DType.uint32](
-        __mlir_op.`pop.index_to_pointer`[
-            _type = __mlir_type.`!kgen.pointer<scalar<ui32>>`
-        ](
-            SIMD[DType.index, 1](
-                numpy_array.__array_interface__["data"][0].__index__()
-            ).value
-        )
-    )
-
-
-fn numpy_data_pointer_f32(
-    numpy_array: PythonObject,
-) raises -> DTypePointer[DType.float32]:
-    return DTypePointer[DType.float32](
-        __mlir_op.`pop.index_to_pointer`[
-            _type = __mlir_type.`!kgen.pointer<scalar<f32>>`
-        ](
-            SIMD[DType.index, 1](
-                numpy_array.__array_interface__["data"][0].__index__()
-            ).value
-        )
-    )
-
-
-fn repeat_elements[input_size: Int](
-    input_ptr: DTypePointer[DType.uint8], 
-    times: Int, 
-    out: DTypePointer[DType.uint8]
+fn repeat_elements[input_size: Int, times: Int, type: DType](
+    input_ptr: DTypePointer[type], 
+    out: DTypePointer[type]
     ):
 
-    @unroll
-    for element in range(input_size):
-        memory.memset(out + (element*times), input_ptr[element], times) 
+    # can't use memset on integers :(
+    for i in range(input_size):
+        var total = i*times
+        for j in range(times):
+            out[j + total] = input_ptr[i]
+        
 
 
 fn closet_power_of_2[number: Int]() -> Int:
     return math.pow[DType.int32, 1](
         2, math.log2(SIMD[DType.float32, 1](number)).__int__() + 1
     ).__int__()
-
-
-fn numpy_data_pointer(
-    numpy_array: PythonObject,
-) raises -> DTypePointer[DType.uint32]:
-    return DTypePointer[DType.uint32](
-        __mlir_op.`pop.index_to_pointer`[
-            _type = __mlir_type.`!kgen.pointer<scalar<ui32>>`
-        ](
-            SIMD[DType.index, 1](
-                numpy_array.__array_interface__["data"][0].__index__()
-            ).value
-        )
-    )
 
 
 struct FOV[type: DType]:
