@@ -14,27 +14,24 @@ struct Stereo[
     second_camera_index: UInt32,
     window_size: Int,
     cam_settings: CamSettings,
-    elements_per_pixel: Int = 4
-    
+    elements_per_pixel: Int = 4,
 ]:
     var cam1: StereoCam[
-        first_camera_index,
-        cam_settings,
-        window_size,
-        elements_per_pixel
+        first_camera_index, cam_settings, window_size, elements_per_pixel
     ]
 
     var cam2: StereoCam[
-        second_camera_index,
-        cam_settings,
-        window_size,
-        elements_per_pixel
+        second_camera_index, cam_settings, window_size, elements_per_pixel
     ]
     var base_line: Float32  # mm
 
+    var helper: DTypePointer[DType.float32]
+    var repeated: DTypePointer[DType.float32]
+    var coefficients: DTypePointer[DType.float32]
     var can_match: DTypePointer[DType.bool]
-    var depth_map: DTypePointer[DType.float32]
+    var disparity_map: DTypePointer[DType.float32]
     var python_utils: python_lib
+    
 
     alias frame_width_padded = closet_power_of_2[cam_settings.frame_width]()
 
@@ -52,42 +49,54 @@ struct Stereo[
         cam_settings.frame_height
     ]() // window_size
 
-    alias items_to_load = closet_power_of_2[
+    alias row_size = closet_power_of_2[
         cam_settings.frame_width
-    ]() * window_size * 4  # can't use self
+    ]() * window_size * elements_per_pixel
 
     fn __init__(
-        inout self,
-        base_line: Float32,
-        parameters: CamParameters
+        inout self, base_line: Float32, parameters: CamParameters
     ) raises:
-
         Python.add_to_path("source/python")
         self.python_utils = Python.import_module("_utils")
 
         self.cam1 = StereoCam[
-            first_camera_index,
-            cam_settings,
-            window_size,
-            elements_per_pixel
+            first_camera_index, cam_settings, window_size, elements_per_pixel
         ](parameters)
 
         self.cam2 = StereoCam[
-            second_camera_index,
-            cam_settings,
-            window_size,
-            elements_per_pixel
+            second_camera_index, cam_settings, window_size, elements_per_pixel
         ](parameters)
 
         self.base_line = base_line
+
+        self.coefficients = DTypePointer[DType.float32].alloc(
+            (self.window_per_row_padded * elements_per_pixel).__int__()
+        )
+
+        self.helper = DTypePointer[DType.float32].alloc(
+            (self.window_per_row_padded * elements_per_pixel).__int__()
+        )
+
+        self.repeated = DTypePointer[DType.float32].alloc(
+            (self.window_per_row_padded 
+            * elements_per_pixel 
+            * self.window_per_row_padded).__int__()
+        )
 
         self.can_match = DTypePointer[DType.bool].alloc(
             (self.windows_per_col * self.windows_per_row).__int__()
         )
 
-        self.depth_map = DTypePointer[DType.float32].alloc(
+        self.disparity_map = DTypePointer[DType.float32].alloc(
             (self.windows_per_row * self.windows_per_col).__int__()
         )
+
+
+    fn __del__(owned self: Self):
+        self.disparity_map.free()
+        self.can_match.free()
+        self.repeated.free()
+        self.helper.free()
 
     fn update[fake: Bool = False](inout self) raises:
         @parameter  # if statement runs at compile time
@@ -98,150 +107,99 @@ struct Stereo[
             self.cam1.window_bgra()
             self.cam2.window_bgra()
 
-            self.cam1.sort_windowed_bgrabgra(self.window_per_row_padded, self.window_per_col_padded)
+            self.cam1.sort_windowed_bgrabgra(
+                self.window_per_row_padded, self.window_per_col_padded
+            )
 
             self.cam2.sort_windowed_bbggrraa()
 
-            # self.frame2_bbggrraa_sum.store(0, frame2_bbggrraa_sum)
+        memset_zero(
+            self.can_match,
+            (self.windows_per_col * self.windows_per_row).__int__(),
+        )
 
-        # memset_zero(
-        #     self.can_match,
-        #     (self.windows_per_col * self.windows_per_row).__int__(),
-        # )
+    fn row_disparity(inout self, inout row: Int):
+        
+        var row_matched_windows = self.cam1.bgrabgra.load[width = self.row_size](
+            self.row_size * row
+        ).cast[DType.float32]().reduce_add[self.window_per_row_padded * elements_per_pixel]()
 
-    # fn get_depth(
-    #     inout self,
-    #     first_window_pose: Pose2d[DType.float32],
-    #     second_window_pose: Pose2d[DType.float32],
-    # ) -> Float32:
-    #     var angle_from_cam1 = self.cam1.angle_to_camera(first_window_pose)
-    #     var angle_from_cam2 = self.cam2.angle_to_camera(second_window_pose)
+        self.helper.store(0, row_matched_windows)
 
-    #     var angle_A: Float32 = pi_over_2 + (
-    #         self.cam1.fov.horizontal() / 2
-    #     ) - angle_from_cam1.horizontal()
+        _utils.repeat_elements[ # repeated bgrabgra's 
+            self.window_per_row_padded * elements_per_pixel,
+            self.window_per_row_padded
+        ](self.helper, self.repeated)
+        
+        var summed_bbggrraa = self.cam2.bbggrraa.load[width = self.row_size](
+            self.row_size * row
+        ).cast[DType.float32]().reduce_add[self.window_per_row_padded * elements_per_pixel]()
 
-    #     var angle_B: Float32 = pi_over_2 - (
-    #         self.cam2.fov.horizontal() / 2
-    #     ) + angle_from_cam2.horizontal()
+        for window_index in range(self.windows_per_row):
 
-    #     var angle_C: Float32 = angle_from_cam1.horizontal() - angle_from_cam2.horizontal()
+            var repeated_window = self.repeated.load[
+                width= self.window_per_row_padded * elements_per_pixel
+            ](window_index * self.window_per_row_padded * elements_per_pixel)
 
-    #     return (self.base_line * math.sin(angle_A) * math.sin(angle_B)) / (
-    #         math.sin(angle_C) * math.cos(angle_from_cam1.vertical())
-    #     )
+            var B = repeated_window[self.window_per_row_padded*0]
+            var G = repeated_window[self.window_per_row_padded*1]
+            var R = repeated_window[self.window_per_row_padded*2]
 
-    # fn windowMSE(
-    #     inout self,
-    #     inout first_window_offset: Int32,
-    #     inout second_window_offset: Int32,
-    # ) -> UInt32:
-    #     var first = self.frame1_windowed.load[
-    #         width = window_size * window_size
-    #     ](first_window_offset)
+            var B_coefficient = B / (B + G + R)
+            var G_coefficient = G / (B + G + R)
+            var R_coefficient = R / (B + G + R)
+            var A_coefficient = 255
 
-    #     var second = self.frame2_windowed.load[
-    #         width = window_size * window_size
-    #     ](second_window_offset)
+            var coefficient_simd = SIMD[DType.float32](
+                B_coefficient, G_coefficient, R_coefficient, A_coefficient
+            )  
 
-    #     return math.abs(first - second).cast[DType.uint32]().reduce_add[1]()
+            self.helper.store(0, coefficient_simd)
 
-    # fn matching_window_position(
-    #     inout self, inout matched_window_pose: Pose2d[DType.float32]
-    # ) -> Pose2d[DType.float32]:
-    #     var matching_col = UInt32.MAX
-    #     var error: UInt32 = UInt32.MAX
+            _utils.repeat_elements[ 
+            elements_per_pixel,
+            self.window_per_row_padded
+            ](self.helper, self.coefficients)
 
-    #     var row_offset = matched_window_pose.row().cast[
-    #         DType.int32
-    #     ]() * self.cam1.frame_size.width() * window_size
+            var error_window = repeated_window - summed_bbggrraa
 
-    #     var matched_window_offset = row_offset + matched_window_pose.col().cast[
-    #         DType.int32
-    #     ]() * window_size * window_size
+            error_window *= self.coefficients.load[
+                width = self.window_per_row_padded * elements_per_pixel 
+            ]()
 
-    #     for col in range(
-    #         0,
-    #         self.windows_per_col * window_size * window_size,
-    #         window_size * window_size,
-    #     ):
-    #         var current_window_offset = row_offset + col
+            var summed_errors = math.abs(error_window).reduce_add[self.window_per_row_padded]()
 
-    #         var current_error = self.windowMSE(
-    #             matched_window_offset, current_window_offset
-    #         )
-    #         if (
-    #             current_error < error
-    #             and not self.can_match[current_window_offset]
-    #         ):
-    #             matching_col = col // (window_size * window_size)
-    #             error = current_error
+            # TODO put in a different function
 
-    #         if error < 7:
-    #             break
+            var min_error = Float32.MAX
+            var index = 0
 
-    #     self.can_match[
-    #         matched_window_pose.row().cast[DType.uint32]()
-    #         * self.windows_per_col
-    #         + (matching_col // (window_size * window_size))
-    #     ] = True
+            for error_index in range(self.windows_per_row):
 
-    #     return Pose2d[DType.float32](
-    #         matched_window_pose.row().cast[DType.float32](),
-    #         matching_col.cast[DType.float32](),
-    #     )
+                var current_error = summed_errors[error_index]
 
-    # always the matched is from frame one and the matching is from frame 2
-    # fn match_row(inout self, inout row: Int) raises -> Pose2d[DType.float32]:
-    #     var row_bbggrraa_sum = self.frame2_bbggrraa_sum.load[
-    #         width = self.items_to_load
-    #     ](self.items_to_load * row)
+                if current_error < min_error:
+                    min_error = current_error
+                    index = error_index
+            
+            self.disparity_map[window_index + row*self.windows_per_row] = index - window_index
 
-    #     for window_col in range(self.windows_per_row):
 
-    #         var window = self.frame1_bgrabgra_sum.load[
-    #             width = self.elements_per_pixel
-    #         ](window_col * self.elements_per_pixel)
+    fn write_frames(inout self) raises:
+        self.cam1.write_frame()
+        self.cam2.write_frame()
+        
+        self.python_utils.write_ptr(
+            self.disparity_map.address.__int__(), FLOAT32_C, 
+            (self.windows_per_col, self.windows_per_row)
+        )
 
-    #         var window_sum = window.reduce_add()
-
-    #         var coefficient_window = window.cast[DType.float32]() / window_sum.cast[DType.float32]()
-
-    #         var repeated_window = repeat_elements_ui16[
-    #             window.size, self.items_to_load // self.elements_per_pixel
-    #         ]
-
-    #         var repetead_coefficient_window = repeat_elements_f32[
-    #             coefficient_window.size,
-    #             self.items_to_load // self.elements_per_pixel,
-    #         ](self.helper_pointer, self.python_utils)
-
-    #         # var rgba_error =
-
-    #     return Pose2d[DType.float32](0, 0)
-
-    # fn write_frames(ino`ut self) raises:
-    #     self.cam1.write_frame()
-    #     self.cam2.write_frame()
-
-    # fn generate_disparity_map[is_fake: Bool = False](inout self) raises:
-    #     var t = now()
-    #     self.update[is_fake]()
-    #     print("update time: ", (now() - t) / 1000000000)
-    #     t = now()
-    #     for img_row in range(self.windows_per_col):
-    #         for col in range(self.windows_per_row):
-    #             var current_pose = Pose2d[DType.float32](img_row, col)
-    #             var matched_window_pose = self.matching_window_position(
-    #                 current_pose
-    #             )
-
-    #             var depth = current_pose.col() - matched_window_pose.col()
-    #             self.depth_map[
-    #                 img_row * self.windows_per_row.__int__() + col
-    #             ] = depth
-    #             # var depth: Float32 = stereo.get_depth[pi_over_2](
-    #             #     current_pose, matched_window_pose
-    #             # )
-    #     print("disparity time: ", (now() - t) / 1000000000)
-    #     print("")
+    fn generate_disparity_map[is_fake: Bool = False](inout self) raises:
+        var t = now()
+        self.update[is_fake]()
+        print("update time: ", (now() - t) / 1000000000)
+        t = now()
+        for img_row in range(self.windows_per_col):
+            self.row_disparity(img_row)
+        print("disparity time: ", (now() - t) / 1000000000)
+        self.write_frames()
