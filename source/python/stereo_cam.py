@@ -19,15 +19,11 @@ class StereoCam(Camera):
         self.update_frame()
         self.windowed = np.empty((0, ))
         self.bgrabgra = np.empty((closet_power_of_2(settings.frame_width)
-                                * closet_power_of_2(settings.frame_height) 
-                                * window_size 
-                                * window_size, 
+                                * closet_power_of_2(settings.frame_height) , 
                                 elements_per_pixel))
         
         self.bbggrraa = np.empty((closet_power_of_2(settings.frame_width)
                                 * closet_power_of_2(settings.frame_height) 
-                                * window_size
-                                * window_size
                                 * elements_per_pixel, ))
         
         self.test = np.array([1, 2, 3], dtype=np.uint8)
@@ -50,6 +46,9 @@ class StereoCam(Camera):
         tricks.sort_windowed_bbggrraa(
             self.windowed, self.bbggrraa
         )
+
+    def write_frame(self):
+        cv2.imwrite(f"cam {self.index}.png", self.bgra)
 
     def test_p(self):
         self.test[0] = 9

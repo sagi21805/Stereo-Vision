@@ -55,6 +55,9 @@ struct StereoCam[
     fn set_exposure(inout self, val: Int) raises:
         self.cap.set_exposure(val)
 
+    fn write_frame(inout self) raises:
+        self.cap.write_frame()
+
     fn __del__(owned self):
         try:
             self.cap.cap.release()
