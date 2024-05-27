@@ -16,7 +16,7 @@ alias window_size = 2
 fn main() raises:
 
     alias settings =  CamSettings()
-    var parameters =  CamParameters(1280, 720, -1, -1)
+    var parameters =  CamParameters(-1, -1, settings)
     alias first_index = 0
     alias second_index = 2
     alias window_size = 2 
@@ -31,6 +31,4 @@ fn main() raises:
    
     while True:
         # print("in loop")
-        var t = now()
-        stereo.update()
-        print("seconds:", (now() - t) / 10**9)
+        stereo.generate_disparity_map()
