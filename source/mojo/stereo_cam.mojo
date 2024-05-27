@@ -9,7 +9,6 @@ alias PyStereoCam = PythonObject
 struct StereoCam[
     index: UInt32,
     settings: CamSettings,
-    window_size: Int,
     elements_per_pixel: Int = 4 # b, g, r, a
 ]:
 
@@ -26,7 +25,7 @@ struct StereoCam[
         self.parameters = parameters
         
         self.cap = stereo_cam_module.StereoCam(
-            index, CamSettings.to_python(settings, settings_module), window_size, elements_per_pixel
+            index, CamSettings.to_python(settings, settings_module), elements_per_pixel
         )
 
         self.bgrabgra = numpy_data_pointer_ui8(self.cap.bgrabgra)
@@ -39,11 +38,11 @@ struct StereoCam[
         return FOV[DType.float32](self.parameters.angle_pixel_ratio.fov * position.pose)
 
 
-    fn window_bgra(inout self) raises:
+    fn window_bgra(inout self, window_size: Int) raises:
         self.cap.window_bgra(window_size)
 
     fn sort_windowed_bgrabgra(
-        inout self, wpr_padded: Int, wpc_padded: Int) raises:
+        inout self, window_size: Int, wpr_padded: Int, wpc_padded: Int) raises:
         self.cap.sort_windowed_bgrabgra(window_size, wpr_padded, wpc_padded)
 
     fn sort_windowed_bbggrraa(inout self) raises:
