@@ -10,21 +10,19 @@ class StereoCam(Camera):
     def __init__(self,
                 index: int, 
                 settings: CamSettings, 
-                window_size: int, 
                 elements_per_pixel: int = 4
                 ) -> None:
         
         super().__init__(index, settings)
 
         self.update_frame()
-        self.windowed = np.empty((0, ))
+        self.windowed = np.empty((0, ), dtype=np.uint8)
         self.bgrabgra = np.empty((closet_power_of_2(settings.frame_width)
                                 * closet_power_of_2(settings.frame_height) , 
-                                elements_per_pixel))
-        
+                                elements_per_pixel), dtype=np.uint8)
         self.bbggrraa = np.empty((closet_power_of_2(settings.frame_width)
                                 * closet_power_of_2(settings.frame_height) 
-                                * elements_per_pixel, ))
+                                * elements_per_pixel, ), dtype=np.uint8)
         
         self.test = np.array([1, 2, 3], dtype=np.uint8)
 
