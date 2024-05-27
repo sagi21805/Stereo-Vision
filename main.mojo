@@ -27,8 +27,5 @@ fn main() raises:
 
     var stereo = Stereo[first_cam_index, second_cam_index, window_size, settings](base_line, parameters)
     
-
-   
-    while True:
-        # print("in loop")
-        stereo.generate_disparity_map()
+    for i in range(2):
+        stereo.bug_function(i)
