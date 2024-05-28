@@ -8,13 +8,8 @@ class Camera:
     ):
         
         self.index = index
-        if settings.fake == "":
-            self.cap = settings.initialize_cap(index)
-            self.warm()
-
-        else:
-            self.cap = cv2.VideoCapture()
-
+        self.cap = settings.initialize_cap(index)
+        self.warm()
 
     def get_frame(self):
         success, frame = self.cap.read()

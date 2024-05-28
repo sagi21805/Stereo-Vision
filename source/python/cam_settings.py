@@ -11,7 +11,6 @@ class CamSettings:
                  contrast: int = 32,
                  saturation: int = 90,
                  gain: int = 0,
-                 fake: str = ""
         ) -> None:
 
         self.frame_width = frame_width
@@ -22,7 +21,6 @@ class CamSettings:
         self.contrast = contrast
         self.saturation = saturation
         self.gain = gain
-        self.fake = fake
 
     def initialize_cap(self, index) -> None:
         cap = cv2.VideoCapture(index)

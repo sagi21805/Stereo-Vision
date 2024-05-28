@@ -12,7 +12,6 @@ struct CamSettings:
     var contrast: Int
     var saturation: Int
     var gain: Int
-    var fake: StringLiteral
 
     fn __init__(
         inout self,
@@ -24,7 +23,6 @@ struct CamSettings:
         contrast: Int = 32,
         saturation: Int = 90,
         gain: Int = 0,
-        fake: StringLiteral = ""
     ):
 
         self.auto_exposure = auto_exposure  
@@ -35,7 +33,6 @@ struct CamSettings:
         self.gain = gain
         self.frame_width = frame_width 
         self.frame_height = frame_height
-        self.fake = fake
 
     fn to_python(inout self, camera_settings_module: python_lib) raises -> PythonObject:
         return camera_settings_module.CamSettings(
@@ -47,7 +44,6 @@ struct CamSettings:
             self.contrast,
             self.saturation,
             self.gain,
-            self.fake
         )
     
     @staticmethod
@@ -61,7 +57,6 @@ struct CamSettings:
             settings.contrast,
             settings.saturation,
             settings.gain,
-            settings.fake
         )
 
 

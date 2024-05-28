@@ -10,11 +10,12 @@ class StereoCam(Camera):
     def __init__(self,
                 index: int, 
                 settings: CamSettings, 
-                elements_per_pixel: int = 4
+                elements_per_pixel: int = 4,
+                fake = ""
                 ) -> None:
         
         super().__init__(index, settings)
-
+        self.fake = fake
         self.update_frame()
         self.windowed = np.empty((0, ), dtype=np.uint8)
         self.bgrabgra = np.empty((closet_power_of_2(settings.frame_width)
@@ -27,7 +28,7 @@ class StereoCam(Camera):
         self.test = np.array([1, 2, 3], dtype=np.uint8)
 
     def update_frame(self):
-        self.frame = self.get_frame()
+        self.frame = self.get_frame() if self.fake == "" else cv2.imread(self.fake)
         self.bgra = cv2.cvtColor(self.frame, cv2.COLOR_BGR2BGRA)
 
     def window_bgra(self, window_size):

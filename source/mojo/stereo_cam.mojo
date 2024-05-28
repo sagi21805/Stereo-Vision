@@ -9,7 +9,8 @@ alias PyStereoCam = PythonObject
 struct StereoCam[
     index: UInt32,
     settings: CamSettings,
-    elements_per_pixel: Int = 4 # b, g, r, a
+    elements_per_pixel: Int = 4, # b, g, r, a
+    fake: StringLiteral = ""
 ]:
 
     var cap: PyStereoCam
@@ -25,7 +26,7 @@ struct StereoCam[
         self.parameters = parameters
         
         self.cap = stereo_cam_module.StereoCam(
-            index, CamSettings.to_python(settings, settings_module), elements_per_pixel
+            index, CamSettings.to_python(settings, settings_module), elements_per_pixel, fake
         )
 
         self.bgrabgra = numpy_data_pointer_ui8(self.cap.bgrabgra)

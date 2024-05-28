@@ -15,23 +15,21 @@ struct Stereo[
     window_size: Int,
     cam_settings: CamSettings,
     elements_per_pixel: Int = 4,
+    fake1: StringLiteral = "",
+    fake2: StringLiteral = ""
 ]:
-    var cam1: StereoCam[
-        first_camera_index, cam_settings, elements_per_pixel
-    ]
+    var cam1: StereoCam[first_camera_index, cam_settings, elements_per_pixel, fake1]
 
-    var cam2: StereoCam[
-        second_camera_index, cam_settings, elements_per_pixel
-    ]
+    var cam2: StereoCam[second_camera_index, cam_settings, elements_per_pixel, fake2]
     var base_line: Float32  # mm
 
-    var helper: DTypePointer[DType.float32]
-    var repeated: DTypePointer[DType.float32]
-    var coefficients: DTypePointer[DType.float32]
+    var helper: DTypePointer[DType.float16]
+    var repeated: DTypePointer[DType.float16]
+    var coefficients: DTypePointer[DType.float16]
     var can_match: DTypePointer[DType.bool]
     var disparity_map: DTypePointer[DType.float32]
     var python_utils: python_lib
-    
+
     alias frame_width_padded = closet_power_of_2[cam_settings.frame_width]()
 
     alias frame_height_padded = closet_power_of_2[cam_settings.frame_height]()
@@ -55,8 +53,9 @@ struct Stereo[
     fn __init__(
         inout self, base_line: Float32, parameters: CamParameters
     ) raises:
-
         print("frame_width:", cam_settings.frame_width)
+
+        print("window_size:", window_size)
 
         print("frame_height:", cam_settings.frame_height)
 
@@ -78,27 +77,29 @@ struct Stereo[
         self.python_utils = Python.import_module("_utils")
 
         self.cam1 = StereoCam[
-            first_camera_index, cam_settings, elements_per_pixel
+            first_camera_index, cam_settings, elements_per_pixel, fake1
         ](parameters)
 
         self.cam2 = StereoCam[
-            second_camera_index, cam_settings, elements_per_pixel
+            second_camera_index, cam_settings, elements_per_pixel, fake2
         ](parameters)
 
         self.base_line = base_line
 
-        self.coefficients = DTypePointer[DType.float32].alloc(
+        self.coefficients = DTypePointer[DType.float16].alloc(
             (self.window_per_row_padded * elements_per_pixel).__int__()
         )
 
-        self.helper = DTypePointer[DType.float32].alloc(
+        self.helper = DTypePointer[DType.float16].alloc(
             (self.window_per_row_padded * elements_per_pixel).__int__()
         )
 
-        self.repeated = DTypePointer[DType.float32].alloc(
-            (self.window_per_row_padded 
-            * elements_per_pixel 
-            * self.window_per_row_padded).__int__()
+        self.repeated = DTypePointer[DType.float16].alloc(
+            (
+                self.window_per_row_padded
+                * elements_per_pixel
+                * self.window_per_row_padded
+            ).__int__()
         )
 
         self.can_match = DTypePointer[DType.bool].alloc(
@@ -108,7 +109,6 @@ struct Stereo[
         self.disparity_map = DTypePointer[DType.float32].alloc(
             (self.windows_per_row * self.windows_per_col).__int__()
         )
-
 
     fn __del__(owned self: Self):
         self.disparity_map.free()
@@ -127,7 +127,9 @@ struct Stereo[
             self.cam2.window_bgra(window_size)
 
             self.cam1.sort_windowed_bgrabgra(
-                window_size, self.window_per_row_padded, self.window_per_col_padded
+                window_size,
+                self.window_per_row_padded,
+                self.window_per_col_padded,
             )
 
             self.cam2.sort_windowed_bbggrraa()
@@ -137,87 +139,90 @@ struct Stereo[
             (self.windows_per_col * self.windows_per_row).__int__(),
         )
 
+    #TODO currently using float16 - max window size is 16, make the float type change depends on window size
     fn row_disparity(inout self, inout row: Int):
-        
+
         var row_data = self.cam1.bgrabgra.load[width = self.row_size](
             self.row_size * row
-        )
-        
-        var row_matched_windows = row_data.cast[DType.uint32]()
-        
-        # .reduce_add[self.window_per_row_padded * elements_per_pixel]()
+        ).cast[DType.float16]().reduce_add[
+            self.window_per_row_padded * elements_per_pixel
+        ]()
 
-        # self.helper.store(row_matched_windows)
+        self.helper.store(row_data)
 
-        print(row_data.cast[DType.float32]().reduce_add[self.window_per_row_padded * elements_per_pixel]()[333])
-
-        print(row_matched_windows[0])
-        _utils.repeat_elements[ # repeated bgrabgra's 
+        _utils.repeat_elements[  # repeated bgrabgra's
             self.window_per_row_padded * elements_per_pixel,
-            self.window_per_row_padded
+            self.window_per_row_padded,
         ](self.helper, self.repeated)
-        
+
         var summed_bbggrraa = self.cam2.bbggrraa.load[width = self.row_size](
             self.row_size * row
-        ).cast[DType.float32]().reduce_add[self.window_per_row_padded * elements_per_pixel]()
+        ).cast[DType.float16]().reduce_add[
+            self.window_per_row_padded * elements_per_pixel
+        ]()
 
         for window_index in range(self.windows_per_row):
-
             var repeated_window = self.repeated.load[
-                width= self.window_per_row_padded * elements_per_pixel
+                width = self.window_per_row_padded * elements_per_pixel
             ](window_index * self.window_per_row_padded * elements_per_pixel)
 
-            var B = repeated_window[self.window_per_row_padded*0]
-            var G = repeated_window[self.window_per_row_padded*1]
-            var R = repeated_window[self.window_per_row_padded*2]
+            var B = repeated_window[self.window_per_row_padded * 0]
+            var G = repeated_window[self.window_per_row_padded * 1]
+            var R = repeated_window[self.window_per_row_padded * 2]
 
             var B_coefficient = B / (B + G + R)
             var G_coefficient = G / (B + G + R)
             var R_coefficient = R / (B + G + R)
-            var A_coefficient = 0
+            var A_coefficient = 1
 
-            var coefficient_simd = SIMD[DType.float32](
+            var coefficient_simd = SIMD[DType.float16](
                 B_coefficient, G_coefficient, R_coefficient, A_coefficient
-            )  
+            )
 
-            # self.helper.store(coefficient_simd)
+            self.helper.store(coefficient_simd)
 
-            _utils.repeat_elements[ 
-            input_size = elements_per_pixel,
-            times = self.window_per_row_padded
+            _utils.repeat_elements[
+                input_size=elements_per_pixel,
+                times = self.window_per_row_padded,
             ](self.helper, self.coefficients)
 
             var error_window = repeated_window - summed_bbggrraa
 
             error_window *= self.coefficients.load[
-                width = self.window_per_row_padded * elements_per_pixel 
+                width = self.window_per_row_padded * elements_per_pixel
             ]()
 
-            var summed_errors = math.abs(error_window).reduce_add[self.window_per_row_padded]()
+            var summed_errors = math.abs(error_window).reduce_add[
+                self.window_per_row_padded
+            ]()
 
             # TODO put in a different function
 
-            var min_error = Float32.MAX
+            var min_error = Float16.MAX
             var index = 0
 
             for error_index in range(self.windows_per_row):
-
                 var current_error = summed_errors[error_index]
 
                 if current_error < min_error:
                     min_error = current_error
                     index = error_index
-            
-            self.disparity_map[window_index + row*self.windows_per_row] = index - window_index
 
+                if min_error < 3:
+                    break
+
+            self.disparity_map[window_index + row * self.windows_per_row] = (
+                index - window_index
+            )
 
     fn write_frames(inout self) raises:
         self.cam1.write_frame()
         self.cam2.write_frame()
-        
+
         self.python_utils.write_ptr(
-            self.disparity_map.address.__int__(), FLOAT32_C, 
-            (self.windows_per_col, self.windows_per_row)
+            self.disparity_map.address.__int__(),
+            FLOAT32_C,
+            (self.windows_per_col, self.windows_per_row),
         )
 
     fn generate_disparity_map[is_fake: Bool = False](inout self) raises:
@@ -227,6 +232,5 @@ struct Stereo[
         t = now()
         for img_row in range(self.windows_per_col):
             self.row_disparity(img_row)
-            pass
         print("disparity time: ", (now() - t) / 1000000000)
         self.write_frames()

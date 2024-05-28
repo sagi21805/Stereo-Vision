@@ -15,20 +15,28 @@ alias window_size = 2
 
 fn main() raises:
 
-    alias settings =  CamSettings()
+    alias settings =  CamSettings(frame_width = 2864, frame_height = 1924)
     var parameters =  CamParameters(-1, -1, settings)
     alias first_index = 0
     alias second_index = 2
-    alias window_size = 2 
+    alias window_size = 8
 
     # print("here")
     var base_line: Float32 = 60.89  # mm
     # var focal_length: Float32 = 2945.377
 
-    var stereo = Stereo[first_cam_index, second_cam_index, window_size, settings](base_line, parameters)
+    var stereo = Stereo[
+        first_cam_index,
+        second_cam_index, 
+        window_size, 
+        settings, 
+        fake1 = "data/im1-min.jpeg",
+        fake2 = "data/im0-min.jpeg"
+        ](base_line, parameters)
+
     
 
    
     while True:
-        # print("in loop")
+        print("in loop")
         stereo.generate_disparity_map()
