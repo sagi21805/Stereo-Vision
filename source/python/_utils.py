@@ -1,42 +1,28 @@
 import cv2
 import numpy as np
 import ctypes
+from numba import njit
 
-WINDOWS = [
-    np.zeros((2864, 1924), dtype=np.uint8),
-    np.zeros((2864, 1924), dtype=np.uint8),
-]   
+DATA_TYPES = [ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32, ctypes.c_float]
 
 
-def get_camera(index: int) -> cv2.VideoCapture:
-    return cv2.VideoCapture(index)
+def ptr_to_numpy(ptr: int, dtype: int, shape: tuple):
+    global DATA_TYPES
+    data_pointer = ctypes.cast(ptr, ctypes.POINTER(DATA_TYPES[dtype]))
+    return np.ctypeslib.as_array(data_pointer, shape=shape)
 
 
-def read_image(path: str):
-    return cv2.imread(path)
+def write_ptr(ptr: int, dtype: int, shape: tuple):
+    cv2.imwrite("ptr.png", ptr_to_numpy(ptr, dtype, shape))
 
 
-def get_window_view(img: np.ndarray, window_size: int, window_number: int):
-    global WINDOWS
-    if img.ndim == 3:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    WINDOWS[window_number] = np.lib.stride_tricks.sliding_window_view(
-        img, (window_size, window_size)
-    )[::window_size, ::window_size].copy()
-    return WINDOWS[window_number]
+@njit(parallel=True)
+def repeat_elements(array, times):
+    return np.repeat(array, times)
 
 
-def get_test_arr(window_number):
-    global WINDOWS
-    WINDOWS[window_number] = np.arange(100).reshape((10, 10)).astype(np.uint8)
-    return WINDOWS[window_number]
+@njit(fastmath=True)
+def closet_power_of_2(num: int):
+    return int(np.power(2, np.ceil(np.log2(num))))
 
-def write_img(name, img):
-    cv2.imwrite(name, img)
 
-def show_ptr(ptr: int, rows, cols):
-    data_pointer = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_float))
-    arr = np.ctypeslib.as_array(data_pointer, shape = (rows, cols))
-    print(arr)
-    cv2.imshow("map", arr)

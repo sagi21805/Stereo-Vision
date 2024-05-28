@@ -3,3 +3,4 @@ build
 Stereo
 test.*
 __pycache__
+*.png

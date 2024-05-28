@@ -1,8 +1,14 @@
-# TODO understand how to make better
+import math
+import memory
 
 alias numpy_array = PythonObject
 alias video_capture = PythonObject
 alias python_lib = PythonObject
+alias pi_over_2 = 1.57079632679489661923
+alias UINT8_C = 0
+alias UINT16 = 1
+alias UINT32_C = 2
+alias FLOAT32_C = 3
 
 
 fn numpy_data_pointer_ui8(
@@ -19,28 +25,23 @@ fn numpy_data_pointer_ui8(
     )
 
 
-fn numpy_data_pointer(
-    numpy_array: PythonObject,
-) raises -> DTypePointer[DType.uint32]:
-    return DTypePointer[DType.uint32](
-        __mlir_op.`pop.index_to_pointer`[
-            _type = __mlir_type.`!kgen.pointer<scalar<ui32>>`
-        ](
-            SIMD[DType.index, 1](
-                numpy_array.__array_interface__["data"][0].__index__()
-            ).value
-        )
-    )
+fn repeat_elements[input_size: Int, times: Int, type: DType](
+    input_ptr: DTypePointer[type], 
+    out: DTypePointer[type]
+    ):
+
+    # can't use memset on integers :(
+    for i in range(input_size):
+        var total = i*times
+        for j in range(times):
+            out[j + total] = input_ptr[i]
+        
 
 
-fn get_window_view[
-    window_size: Int, window_number: Int
-](img: PythonObject, python_utils: PythonObject) raises -> DTypePointer[
-    DType.uint8
-]:
-    return numpy_data_pointer_ui8(
-        python_utils.get_window_view(img, window_size, window_number)
-    )
+fn closet_power_of_2[number: Int]() -> Int:
+    return math.pow[DType.int32, 1](
+        2, math.log2(SIMD[DType.float32, 1](number)).__int__() + 1
+    ).__int__()
 
 
 struct FOV[type: DType]:

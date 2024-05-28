@@ -3,21 +3,40 @@ from source.mojo.camera import *
 from source.mojo._utils import *
 from time import now
 import time
+from source.mojo.cam_settings import CamSettings
+from source.mojo.cam_parameters import CamParameters
+
+
+alias first_cam_index = 0
+alias second_cam_index = 2
+alias window_size = 2
+        
 
 
 fn main() raises:
-    var cam1 = Camera(2, Size[DType.uint32](1280, 720), 1758.38)
-    var cam2 = Camera(0, Size[DType.uint32](1280, 720), 1758.38)
-    # var cam1 = Camera(Size[DType.uint32](2864, 1924), 2945.377)
-    # var cam2 = Camera(Size[DType.uint32](2864, 1924), 2945.377)
-    var baseLine: Float32 = 60.89  # mm
-    var stereo = Stereo[2](cam1, cam2, baseLine)
-   
+
+    alias settings =  CamSettings(frame_width = 2864, frame_height = 1924)
+    var parameters =  CamParameters(-1, -1, settings)
+    alias first_index = 0
+    alias second_index = 2
+    alias window_size = 8
+
+    # print("here")
+    var base_line: Float32 = 60.89  # mm
+    # var focal_length: Float32 = 2945.377
+
+    var stereo = Stereo[
+        first_cam_index,
+        second_cam_index, 
+        window_size, 
+        settings, 
+        fake1 = "data/im1-min.jpeg",
+        fake2 = "data/im0-min.jpeg"
+        ](base_line, parameters)
+
+    
+
    
     while True:
+        print("in loop")
         stereo.generate_disparity_map()
-        stereo.cv2.imwrite("1.png", stereo.frame1)
-        stereo.cv2.imwrite("2.png", stereo.frame2)
-        stereo.cv2.imwrite("3.png", stereo.depth_map_array)
-        time.sleep(0.5)
-        print("iter")
