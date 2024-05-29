@@ -4,3 +4,5 @@ Stereo
 test.*
 __pycache__
 *.png
+.vscode
+*.jpeg
