@@ -13,7 +13,7 @@ def ptr_to_numpy(ptr: int, dtype: int, shape: tuple):
 
 
 def write_ptr(ptr: int, dtype: int, shape: tuple):
-    cv2.imwrite("ptr.png", ptr_to_numpy(ptr, dtype, shape))
+    cv2.imwrite("assets/ptr.png", ptr_to_numpy(ptr, dtype, shape))
 
 
 @njit(parallel=True)
