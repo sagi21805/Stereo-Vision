@@ -26,7 +26,7 @@ struct Stereo[
     var helper: DTypePointer[DType.float16]
     var repeated: DTypePointer[DType.float16]
     var coefficients: DTypePointer[DType.float16]
-    var can_match: DTypePointer[DType.bool]
+    var cant_match: DTypePointer[DType.bool]
     var disparity_map: DTypePointer[DType.float32]
     var python_utils: python_lib
 
@@ -102,7 +102,7 @@ struct Stereo[
             ).__int__()
         )
 
-        self.can_match = DTypePointer[DType.bool].alloc(
+        self.cant_match = DTypePointer[DType.bool].alloc(
             (self.windows_per_col * self.windows_per_row).__int__()
         )
 
@@ -112,7 +112,7 @@ struct Stereo[
 
     fn __del__(owned self: Self):
         self.disparity_map.free()
-        self.can_match.free()
+        self.cant_match.free()
         self.repeated.free()
         self.helper.free()
         self.coefficients.free()
@@ -135,7 +135,7 @@ struct Stereo[
             self.cam2.sort_windowed_bbggrraa()
 
         memset_zero(
-            self.can_match,
+            self.cant_match,
             (self.windows_per_col * self.windows_per_row).__int__(),
         )
 
@@ -204,16 +204,15 @@ struct Stereo[
             for error_index in range(self.windows_per_row):
                 var current_error = summed_errors[error_index]
 
-                if current_error < min_error:
+                if current_error < min_error and not self.cant_match[error_index + row * self.windows_per_row]:
                     min_error = current_error
                     index = error_index
-
-                if min_error < 3:
-                    break
 
             self.disparity_map[window_index + row * self.windows_per_row] = (
                 index - window_index
             )
+
+            self.cant_match[index + row * self.windows_per_row] = 1
 
     fn write_frames(inout self) raises:
         self.cam1.write_frame()
