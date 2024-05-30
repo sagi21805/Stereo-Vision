@@ -47,7 +47,7 @@ class StereoCam(Camera):
         )
 
     def write_frame(self):
-        cv2.imwrite(f"cam {self.index}.png", self.bgra)
+        cv2.imwrite(f"assets/cam {self.index}.png", self.bgra)
 
     def test_p(self):
         self.test[0] = 9
