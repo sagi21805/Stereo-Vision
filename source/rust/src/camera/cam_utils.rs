@@ -4,28 +4,28 @@ use opencv::videoio::{VideoCapture, VideoWriter,
     CAP_PROP_SATURATION, CAP_PROP_GAIN, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FOURCC};
 
 pub struct CamSettings {
-    auto_exposure: bool,
-    exposure: i32,
-    brightness: i32,
-    contrast: i32,
-    saturation: i32,
-    gain: i32,
-    frame_width: i32,
-    frame_height: i32,
+    pub auto_exposure: bool,
+    pub exposure: i32,
+    pub brightness: i32,
+    pub contrast: i32,
+    pub saturation: i32,
+    pub gain: i32,
+    pub frame_width: i32,
+    pub frame_height: i32,
 }
 
 impl CamSettings {
 
-    pub fn initialize_cap(&self, index: i32) -> VideoCapture {
+    pub fn initialize_cap(&self, index: i32) -> Result<VideoCapture, &str> {
         let mut cap = VideoCapture::new(index, CAP_ANY).unwrap(); 
 
         if !VideoCapture::is_opened(&cap).unwrap() {
-            panic!("Unable to open the camera");
+            return Err("Couldn't open cam");
         }
 
         let fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G').unwrap() as f64;
         cap.set(CAP_PROP_FOURCC, fourcc).unwrap();
-        cap.set(CAP_PROP_AUTO_EXPOSURE, (3 - (self.auto_exposure as i32 * 2)) as f64).unwrap();
+        cap.set(CAP_PROP_AUTO_EXPOSURE, (3 - (!self.auto_exposure as i32 * 2)) as f64).unwrap();
         cap.set(CAP_PROP_EXPOSURE, self.exposure as f64).unwrap();
         cap.set(CAP_PROP_BRIGHTNESS, self.brightness as f64).unwrap();
         cap.set(CAP_PROP_CONTRAST, self.contrast as f64).unwrap();
@@ -36,9 +36,8 @@ impl CamSettings {
 
 
 
-        cap
+        Ok(cap)
     }
-
 }
 
 impl Default for CamSettings {
@@ -59,11 +58,32 @@ impl Default for CamSettings {
 
 
 pub struct CamParameters {
-    focal_length_x: i32,
-    focal_length_y: i32,
-    center_x: i32,
-    center_y: i32,
-    horizontal_angle: f32,
-    vertical_angle: f32,
-    angle_pixel_ratio: f32,
+    pub focal_length_x: i32,
+    pub focal_length_y: i32,
+    pub center_x: i32,
+    pub center_y: i32,
+    pub horizontal_angle: f32,
+    pub vertical_angle: f32,
+    pub angle_pixel_ratio: f32,
+    pub compersion_level: i32
+}
+
+impl CamParameters {
+
+
+    pub fn empty() -> Self {
+
+        CamParameters {
+            focal_length_x: -1,
+            focal_length_y: -1,
+            center_x: -1,
+            center_y: -1,
+            horizontal_angle: -1.0,
+            vertical_angle: -1.0,
+            angle_pixel_ratio: -1.0,
+            compersion_level: 9
+        }
+
+    }
+
 }
