@@ -1,8 +1,10 @@
+use opencv::core::Vector;
 use opencv::prelude::*;
 use opencv::videoio::{VideoCapture, VideoWriter,
     CAP_ANY, CAP_PROP_EXPOSURE, CAP_PROP_BRIGHTNESS, CAP_PROP_CONTRAST, CAP_PROP_AUTO_EXPOSURE,
     CAP_PROP_SATURATION, CAP_PROP_GAIN, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FOURCC};
 use super::super::utils::point::Point;
+use opencv::imgcodecs::IMWRITE_PNG_COMPRESSION;
 pub struct CamSettings {
     pub auto_exposure: bool,
     pub exposure: i32,
@@ -62,7 +64,7 @@ pub struct CamParameters {
     pub center: Point<i32>,
     pub angles: Point<i32>,
     pub angle_pixel_ratio: Point<f32>,
-    pub compersion_level: i32
+    pub png_params: Vector<i32>
 }
 
 impl CamParameters {
@@ -74,7 +76,7 @@ impl CamParameters {
             center: Point::new(-1, -1),
             angles: Point::new(-1, -1),
             angle_pixel_ratio: Point::new(-1.0, -1.0),
-            compersion_level: 9
+            png_params: Vector::from_iter(vec![IMWRITE_PNG_COMPRESSION, 9])
         }
 
     }
