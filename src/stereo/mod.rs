@@ -2,17 +2,17 @@ use super::camera::Camera;
 use opencv::prelude::*;
 
 
-struct Stereo {
+pub struct Stereo<'a> {
 
-    cam1: Camera,
-    cam2: Camera,
+    cam1: Camera<'a>,
+    cam2: Camera<'a>,
     base_line: f32,
     
 }
 
-impl Stereo {
+impl<'a> Stereo<'a> {
 
-    fn new(cam1: Camera, cam2: Camera, base_line: f32) -> Self {
+    pub fn new(cam1: Camera<'a>, cam2: Camera<'a>, base_line: f32) -> Self {
 
         Stereo {
             cam1,
