@@ -2,7 +2,7 @@ use opencv::prelude::*;
 use opencv::videoio::{VideoCapture, VideoWriter,
     CAP_ANY, CAP_PROP_EXPOSURE, CAP_PROP_BRIGHTNESS, CAP_PROP_CONTRAST, CAP_PROP_AUTO_EXPOSURE,
     CAP_PROP_SATURATION, CAP_PROP_GAIN, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FOURCC};
-
+use super::super::utils::point::Point;
 pub struct CamSettings {
     pub auto_exposure: bool,
     pub exposure: i32,
@@ -58,29 +58,22 @@ impl Default for CamSettings {
 
 
 pub struct CamParameters {
-    pub focal_length_x: i32,
-    pub focal_length_y: i32,
-    pub center_x: i32,
-    pub center_y: i32,
-    pub horizontal_angle: f32,
-    pub vertical_angle: f32,
-    pub angle_pixel_ratio: f32,
+    pub focal_length: Point<i32>,
+    pub center: Point<i32>,
+    pub angles: Point<i32>,
+    pub angle_pixel_ratio: Point<f32>,
     pub compersion_level: i32
 }
 
 impl CamParameters {
 
-
     pub fn empty() -> Self {
 
         CamParameters {
-            focal_length_x: -1,
-            focal_length_y: -1,
-            center_x: -1,
-            center_y: -1,
-            horizontal_angle: -1.0,
-            vertical_angle: -1.0,
-            angle_pixel_ratio: -1.0,
+            focal_length: Point::new(-1, -1),
+            center: Point::new(-1, -1),
+            angles: Point::new(-1, -1),
+            angle_pixel_ratio: Point::new(-1.0, -1.0),
             compersion_level: 9
         }
 

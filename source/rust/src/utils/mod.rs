@@ -1,6 +1,8 @@
-use opencv::prelude::*;
+use opencv::{imgproc, prelude::*};
+use std::rc::Rc;
+pub mod point;
 
-pub fn mat_to_slice(mat: &Mat) -> Result<&[u8], &str> {
+pub fn mat_to_slice(mat: &Mat) -> Result<Rc<&[u8]>, &str> {
     // Check if the Mat is continuous
     if !mat.is_continuous() {
         return Err("Mat isn't continuous, can't turn into a slice");
@@ -11,6 +13,8 @@ pub fn mat_to_slice(mat: &Mat) -> Result<&[u8], &str> {
     println!("total size: {}", total);
 
     Ok(unsafe { 
-        std::slice::from_raw_parts(data_ptr, total) 
+        Rc::new(std::slice::from_raw_parts(data_ptr, total)) 
     })
 }
+
+
