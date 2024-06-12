@@ -1,6 +1,5 @@
 build
 .vscode
-Stereo
 test.*
 __pycache__
 *.png
