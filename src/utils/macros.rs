@@ -16,4 +16,3 @@ macro_rules! pub_struct {
         }
     };
 }
-

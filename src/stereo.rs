@@ -1,26 +1,30 @@
-use crate::{pub_struct};
-use super::{camera::Camera, utils, utils::camera::{CamParameters, CamSettings}};
+use super::{
+    camera::Camera,
+    utils,
+    utils::camera::{CamParameters, CamSettings},
+};
+use crate::pub_struct;
 use opencv::prelude::*;
 
 pub_struct! {
     pub struct Stereo<'a> {
-    
+
         cam1: Camera<'a>,
         cam2: Camera<'a>,
         base_line: f32,
-        
+
     }
 
 }
 
-
 impl<'a> Stereo<'a> {
     pub fn new(
-        index1: i32, 
-        index2: i32, 
+        index1: i32,
+        index2: i32,
         base_line: f32,
-        settings: &'a CamSettings, 
-        params: &'a CamParameters) -> Self {
+        settings: &'a CamSettings,
+        params: &'a CamParameters,
+    ) -> Self {
         Stereo {
             cam1: Camera::new(index1, settings, params),
             cam2: Camera::new(index2, settings, params),

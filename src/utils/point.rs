@@ -1,5 +1,5 @@
-use std::ops::{Add, Sub, Mul, Div};
 use num::Num;
+use std::ops::{Add, Div, Mul, Sub};
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point<T> {
     pub x: T,
@@ -55,5 +55,3 @@ impl<T: Num + Copy> Div<T> for Point<T> {
         }
     }
 }
-
-
