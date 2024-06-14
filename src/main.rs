@@ -1,30 +1,27 @@
+#[macro_use]
 mod utils;
 mod camera; 
 mod stereo;
-use camera::cam_utils::{CamParameters, CamSettings};
-use camera::Camera;
-use std::{thread, time::Duration};
+use stereo::Stereo;
+use utils::camera::{CamParameters, CamSettings};
+use std::time::Duration;
+use std::thread;
 
 fn main() {
     let settings = CamSettings {
         frame_width: 1280,
-        frame_height: 720,
+        frame_height: 800,
         ..Default::default()
     };
     let params = CamParameters::empty();
 
-    println!("{}", params.angles.x);
-
-    let mut cam = Camera::new(0, settings, params);
-    
-    for _ in 0..20 {
-        cam.update_frame();
-        cam.write_frames();
-        thread::sleep(Duration::from_millis(100));
-        let slice = utils::mat_to_slice(&cam.frame).unwrap();
-        println!("{}", slice[0]);
-    }
-
+    let mut stereo = Stereo::new(0, 2, 0.0, &settings, &params);
     // println!("{}", vec[0]);
+    loop {
+    stereo.update_frame();
+    stereo.save_frame();
+    thread::sleep(Duration::from_millis(200));
+
+    }
 }
 
