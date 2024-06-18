@@ -4,7 +4,6 @@ use super::{
     utils::camera::{CamParameters, CamSettings},
 };
 use crate::pub_struct;
-use opencv::prelude::*;
 
 pub_struct! {
     pub struct Stereo<'a> {

@@ -11,7 +11,6 @@ pub struct Camera<'a> {
     settings: &'a CamSettings,
     params: &'a CamParameters,
     pub frame: Mat,
-    pub frame_slice: Option<Rc<&'a [u8]>>,
 }
 
 impl<'a> Camera<'a> {
@@ -21,8 +20,7 @@ impl<'a> Camera<'a> {
             cap: settings.initialize_cap(index).unwrap(),
             settings,
             params,
-            frame: Mat::default(),
-            frame_slice: None,
+            frame: Mat::default()
         };
 
         camera.warm_up();
@@ -32,12 +30,11 @@ impl<'a> Camera<'a> {
 
     pub fn update_frame(&mut self) {
         self.cap.read(&mut self.frame).expect("Couldn't read frame");
-        self.frame_slice = utils::mat_to_slice(&self.frame);
     }
 
     fn warm_up(&mut self) {
-        for _ in 0..20 {
-            self.cap.read(&mut self.frame).expect("Couldn't read frame");
+        for _ in 0..30 {
+            self.update_frame();
         }
     }
 }

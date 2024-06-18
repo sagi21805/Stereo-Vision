@@ -59,7 +59,7 @@ impl Default for CamSettings {
             saturation: 90,
             gain: 0,
             frame_width: 1280,
-            frame_height: 720,
+            frame_height: 800,
         }
     }
 }
