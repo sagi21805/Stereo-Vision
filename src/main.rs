@@ -2,24 +2,65 @@
 mod utils;
 mod camera;
 mod stereo;
-use std::thread;
-use std::time::Duration;
-use stereo::Stereo;
+use camera::Camera;
+use opencv::core::MatTrait;
 use utils::camera::{CamParameters, CamSettings};
+use utils::{mat_to_slice, save_frame};
+use std::thread;
+use std::time::{Instant, Duration};
+use stereo::Stereo;
+use arrayfire::{self as af};
+// fn main() {
+
+//     let settings = CamSettings::default();
+//     let params = CamParameters::empty();
+             
+//     let mut camera = Camera::new(
+//         0, 
+//         &settings, 
+//         &params
+//     );
+
+//     save_frame("frame", &camera.frame);
+
+//     let array = af::Array::new(
+//         mat_to_slice(&camera.frame).unwrap(), 
+//         af::dim4!(1280, 800)
+//     );
+
+
+//     benchmark();
+// }
+
+
+extern crate arrayfire;
+
+use arrayfire::{Dim4, Array, randu, matmul, device_info, set_backend, get_device, sync, Backend};
+
+fn benchmark_matmul(backend: Backend, dim: u64) -> std::time::Duration {
+    set_backend(backend);
+    let dims = Dim4::new(&[dim, dim, 1, 1]);
+    let a = randu::<f32>(dims);
+    let b = randu::<f32>(dims);
+    sync(get_device()); // Ensure all operations are complete
+    
+    let start = Instant::now();
+    let _c = matmul(&a, &b, arrayfire::MatProp::NONE, arrayfire::MatProp::NONE);
+    sync(get_device()); // Ensure all operations are complete
+    start.elapsed()
+}
 
 fn main() {
-    let settings = CamSettings {
-        frame_width: 1280,
-        frame_height: 800,
-        ..Default::default()
-    };
-    let params = CamParameters::empty();
+    // Benchmark settings
+    let dim = 1024; // Example dimension size
 
-    let mut stereo = Stereo::new(0, 2, 0.0, &settings, &params);
-    // println!("{}", vec[0]);
-    loop {
-        stereo.update_frame();
-        stereo.save_frame();
-        thread::sleep(Duration::from_millis(200));
-    }
+
+    // GPU Benchmark
+    let gpu_time = benchmark_matmul(Backend::OPENCL, dim);
+    println!("GPU time: {:?}", gpu_time);
+
+    // CPU Benchmark
+    let cpu_time = benchmark_matmul(Backend::CPU, dim);
+    println!("CPU time: {:?}", cpu_time);
 }
+
