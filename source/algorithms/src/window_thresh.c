@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <malloc.h>
 #include <memory.h>
+#include <arm_neon.h>
+
 
 uint8_t* slidingWindowThresholdOptimized(
         uint8_t* img, int32_t rows, int32_t cols, int32_t window_size, uint8_t threshold
