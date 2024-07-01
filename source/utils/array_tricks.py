@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 from numba import njit, prange
-from _utils import closet_power_of_2
+
+
+def closet_power_of_2(x: int):
+    return int(np.power(2, np.ceil(np.log2(x))))
+
 
 def pad_array_power_of_2(image: np.ndarray, constant_value: int = 0):
 
@@ -27,14 +31,14 @@ def pad_array_power_of_2(image: np.ndarray, constant_value: int = 0):
 
 @njit
 def window_bgra(
-    padded_bgra: np.ndarray, 
+    padded_bgra: np.ndarray,
     window_size: int
-    ):
+):
 
     windowed_frame = np.lib.stride_tricks.sliding_window_view(
         padded_bgra, (window_size, window_size, 4)
     )[::window_size, ::window_size].copy()
-    
+
     windowed_frame = windowed_frame.reshape(
         (
             windowed_frame.shape[0],
@@ -44,7 +48,6 @@ def window_bgra(
             4,  # bgra
         )
     )
-
     return windowed_frame
 
 
@@ -72,8 +75,8 @@ def sort_windowed_bgrabgra(
         for col in prange(wpr_padded):
             out_arr[
                 col
-                + per_row_offset * row : per_row_offset * (row + 1) : wpr_padded
-             ] = windowed_frame[col + row * wpr_padded]
+                + per_row_offset * row: per_row_offset * (row + 1): wpr_padded
+            ] = windowed_frame[col + row * wpr_padded]
 
 
 @njit(fastmath=True, parallel=True)
@@ -87,5 +90,5 @@ def sort_windowed_bbggrraa(
         total = row * rounded
         for col in prange(windowed_frame.shape[1]):
             out_arr[
-                col + total : size + total : windowed_frame.shape[1]
+                col + total: size + total: windowed_frame.shape[1]
             ] = windowed_frame[row][col].flatten()
