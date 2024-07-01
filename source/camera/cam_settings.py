@@ -1,17 +1,18 @@
 import cv2
 
+
 class CamSettings:
-       
-    def __init__(self, 
+
+    def __init__(self,
                  frame_width: int = 1280,
-                 frame_height: int = 720,
+                 frame_height: int = 800,
                  auto_exposure: bool = True,
                  exposure: int = 157,
                  brightness: int = 0,
                  contrast: int = 32,
                  saturation: int = 90,
                  gain: int = 0,
-        ) -> None:
+                 ) -> None:
 
         self.frame_width = frame_width
         self.frame_height = frame_height
@@ -26,7 +27,8 @@ class CamSettings:
         cap = cv2.VideoCapture(index)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
         cap.set(
-            cv2.CAP_PROP_AUTO_EXPOSURE, 3 - (not self.auto_exposure).__int__() * 2
+            cv2.CAP_PROP_AUTO_EXPOSURE, 3 -
+            (not self.auto_exposure).__int__() * 2
         )
         cap.set(cv2.CAP_PROP_EXPOSURE, self.exposure)
         cap.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
