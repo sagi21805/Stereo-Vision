@@ -1,56 +1,74 @@
-// #include "simd.h"
-// #include "utils.h"
-#include <omp.h>
-#include <time.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <arm_neon.h>
-#include <stdio.h>
-// #include <assert.h>
+#include "simd.h"
 
-void add_uint8_simd(uint8_t* a, uint8_t* b, uint8_t* result, int size) {
-    int i;
-    int num_chunks = size / 16; // Assuming size is a multiple of 16 for 128-bit SIMD
+#define SIMD_SIZE 128
+#define SIMD_SIZE_BYTE SIMD_SIZE / 8
 
-    // Load data into NEON registers
-    uint8x16_t va, vb, vresult;
-    for (i = 0; i < num_chunks; ++i) {
-        va = vld1q_u8(a);
-        vb = vld1q_u8(b);
-        
-        // Perform SIMD addition
-        vresult = vaddq_u8(va, vb);
+void add_arrays_u8_u8_u16(const uint8_t* a, const uint8_t* b, uint16_t* c, size_t size) {
 
-        // Store result back to memory
-        vst1q_u8(result, vresult);
+    size_t i = 0;
+    size_t step_size = SIMD_SIZE_BYTE / sizeof(uint16_t);
 
-        // Move pointers to next chunk
-        a += 16;
-        b += 16;
-        result += 16;
+    for (; i < (size - step_size); i += step_size) {
+        // Load 8 uint8_t elements from array1 and array2
+        uint8x8_t neon1 = vld1_u8(a + i);
+        uint8x8_t neon2 = vld1_u8(b + i);
+
+        // Convert uint8_t to uint16_t by zero-extending and then add
+        uint16x8_t sum = vaddl_u8(neon1, neon2);
+
+        // Store the result in result array as uint16_t
+        vst1q_u16(c + i, sum);
     }
+
+    for (; i < size; i++){
+        c[i] = (uint16_t) a[i] + b[i];
+    }
+    
 }
 
-int main() {
-    const int size = 64; // Example size
-    uint8_t a[size], b[size], result[size];
+void add_arrays_u16_u16_u16(const uint16_t* a, const uint16_t* b, uint16_t* c, size_t size) {
 
-    // Initialize arrays a and b with some values (example)
-    for (int i = 0; i < size; ++i) {
-        a[i] = i;
-        b[i] = size - i;
+    size_t i = 0;
+    size_t step_size = SIMD_SIZE_BYTE / sizeof(uint16_t);
+
+    for (; i < (size - step_size); i += step_size) {
+        // Load 8 uint8_t elements from array1 and array2
+        uint16x8_t neon1 = vld1q_u16(a + i);
+        uint16x8_t neon2 = vld1q_u16(b + i);
+
+        // Convert uint8_t to uint16_t by zero-extending and then add
+        uint16x8_t sum = vaddq_u16(neon1, neon2);
+
+        // Store the result in result array as uint16_t
+        vst1q_u16(c + i, sum);
     }
 
-    // Call SIMD addition function
-    add_uint8_simd(a, b, result, size);
-
-    // Print the result (example)
-    printf("[");
-    for (int i = 0; i < size; ++i) {
-        printf("%d ", result[i]);
+    for (; i < size; i++){
+        c[i] = a[i] + b[i];
     }
-    printf("\b]\n");
-
-    return 0;
+    
 }
+
+void add_arrays_u16_u16_u32(const uint16_t* a, const uint16_t* b, uint32_t* c, size_t size) {
+
+    size_t i = 0;
+    size_t step_size = SIMD_SIZE_BYTE / sizeof(uint32_t);
+
+    for (; i < (size - step_size); i += step_size) {
+        // Load 8 uint8_t elements from array1 and array2
+        uint16x4_t neon1 = vld1_u16(a + i);
+        uint16x4_t neon2 = vld1_u16(b + i);
+
+        // Convert uint8_t to uint16_t by zero-extending and then add
+        uint32x4_t sum = vaddl_u16(neon1, neon2);
+
+        // Store the result in result array as uint16_t
+        vst1q_u32(c + i, sum);
+    }
+
+    for (; i < size; i++){
+        c[i] = (uint32_t) a[i] + b[i];
+    }
+    
+}
+
