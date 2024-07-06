@@ -3,5 +3,24 @@ name = "algorithms"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
+ndarray = "0.15.3"
+numpy = "0.15"
 rayon = "1.10.0"
+num-traits = "0.2.19"
+
+[dependencies.pyo3]
+version = "0.15.1"
+features = ["extension-module"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = false
+incremental = false
+overflow-checks = false
+panic = "abort"

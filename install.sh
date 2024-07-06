@@ -1,13 +1,16 @@
 #!/bin/sh
-sudo apt update && sudo apt upgrade  -y 
-sudo apt-get install software-properties-common
-sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt-get update
-sudo apt-get install python
 
-pip install requirements.txt -r 
 
-curl -s https://get.modular.com | sh -
+install_path=$(python3 -m site --user-site)
 
-modular install mojo
+pip3 install maturin
+
+maturin build --manifest-path source/algorithms/Cargo.toml --release
+
+pip3 install source/algorithms/target/wheels/* --force-reinstall
+
+pybind11-stubgen algorithms -o $install_path
+
+
+
 

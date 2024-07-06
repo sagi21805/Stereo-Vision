@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! time_function {
     ($func:expr) => {{
