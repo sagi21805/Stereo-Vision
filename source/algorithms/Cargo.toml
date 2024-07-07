@@ -22,5 +22,5 @@ lto = "fat"
 codegen-units = 1
 debug = false
 incremental = false
-overflow-checks = false
+overflow-checks = true
 panic = "abort"
