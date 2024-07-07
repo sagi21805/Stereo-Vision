@@ -5,11 +5,13 @@ install_path=$(python3 -m site --user-site)
 
 pip3 install maturin
 
-maturin build --manifest-path source/algorithms/Cargo.toml --release
+cd source/algorithms
 
-pip3 install source/algorithms/target/wheels/* --force-reinstall
+cargo test
 
-pybind11-stubgen algorithms -o $install_path
+maturin build --release
+
+pip3 install target/wheels/* --force-reinstall
 
 
 
