@@ -18,7 +18,8 @@ pub fn neon_integral_image(source_image: &[u8], width: usize, height: usize) -> 
     let integral_image_start = integral_image.as_mut_ptr().wrapping_add(integral_image_width + 1);
 
     let zero_vec = unsafe { vdupq_n_u16(0) };
-
+    
+    let mut prefix_sum_last_element = 0;
     // prefix sum for rows
     for i in 0..height {
         let mut carry = unsafe { vdupq_n_u32(0) };
@@ -31,7 +32,7 @@ pub fn neon_integral_image(source_image: &[u8], width: usize, height: usize) -> 
         let mut j = 0;
 
         // iterate over the row in 16 byte chunks
-        while j + 16 <= width {
+        while (j + 16) <= width {
             let elements = unsafe { vld1q_u8(source_image.as_ptr().wrapping_add(source_row_offset + j)) };
 
             let low_elements8 = unsafe { vget_low_u8(elements) };
@@ -53,7 +54,7 @@ pub fn neon_integral_image(source_image: &[u8], width: usize, height: usize) -> 
             let high_elements_of_low_prefix32 = unsafe { vaddq_u32(vmovl_u16(vget_high_u16(low_elements16)), carry) };
             unsafe { vst1q_u32(integral_image_start.wrapping_add(integral_row_offset + j + 4), high_elements_of_low_prefix32) };
 
-            let mut prefix_sum_last_element = unsafe { vgetq_lane_u32(high_elements_of_low_prefix32, 3) };
+            prefix_sum_last_element = unsafe { vgetq_lane_u32(high_elements_of_low_prefix32, 3) };
             carry = unsafe { vdupq_n_u32(prefix_sum_last_element) };
 
             let low_elements_of_high_prefix32 = unsafe { vaddq_u32(vmovl_u16(vget_low_u16(high_elements16)), carry) };
@@ -68,8 +69,6 @@ pub fn neon_integral_image(source_image: &[u8], width: usize, height: usize) -> 
             j += 16;
         }
 
-        // now handle the remainders (< 16 pixels)
-        let mut prefix_sum_last_element = 0;
         for k in j..width {
             prefix_sum_last_element += source_image[source_row_offset + k] as u32;
             unsafe { *integral_image_start.wrapping_add(integral_row_offset + k) = prefix_sum_last_element };
