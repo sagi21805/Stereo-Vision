@@ -1,7 +1,7 @@
-use numpy::{PyArray2, PyReadonlyArray2};
 use ndarray::Array2;
-use rayon::prelude::*;
+use numpy::{PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
+use rayon::prelude::*;
 
 pub fn _sliding_window_multi_threshold(
     img: &[u8],
@@ -43,22 +43,19 @@ pub fn sliding_window_multi_threshold(
     window_size: usize,
     thresholds_num: usize,
 ) -> Py<PyArray2<u8>> {
-    
     let movement_rows = img.shape()[0] - window_size + 1;
     let movement_cols = img.shape()[1] - window_size + 1;
 
     let out = _sliding_window_multi_threshold(
         img.as_slice().unwrap(),
-        img.shape()[0], 
-        img.shape()[1], 
-        window_size, 
-        thresholds_num
+        img.shape()[0],
+        img.shape()[1],
+        window_size,
+        thresholds_num,
     );
 
-    let integral_array = Array2::from_shape_vec(
-        (movement_rows, movement_cols), 
-        out
-    ).expect("Failed to create integral image array");
+    let integral_array = Array2::from_shape_vec((movement_rows, movement_cols), out)
+        .expect("Failed to create integral image array");
 
     PyArray2::from_array(py, &integral_array).to_owned()
 }
