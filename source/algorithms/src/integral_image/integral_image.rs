@@ -43,7 +43,54 @@ impl IntegralImage {
         }
     }
 
+    pub fn sliding_window_threshold(
+        &self,
+        py: Python,
+        window_size: usize,
+        threshold: usize
+    ) -> Py<PyArray2<u8>> {
+
+        let arr = self.integral_image.as_ref(py);
+        let integral_width: usize = arr.shape()[1];
+        let integral_height: usize = arr.shape()[0];
+
+        let integral_vec: Vec<u32> = arr.to_vec().unwrap();
+
+        let final_rows = integral_height - window_size;
+        let final_cols = integral_width - window_size;
+
+        let mut out = vec![0u8; final_cols * final_rows];
+
+        out.par_iter_mut()
+            .enumerate()
+            .for_each(|(index, out_pixel)| {
+            let img_row = index / final_cols;
+            let img_col = index % final_cols;
+            
+            let sum: u32 = rectangle_sum(
+                    &integral_vec,
+                    integral_width,
+                    img_col, 
+                    img_row, 
+                    window_size, 
+                    window_size
+            ).saturating_sub(1);
+
     
+            if sum as usize > threshold * window_size * window_size {
+                *out_pixel = 255;
+            }
+        });
+
+        let integral_array = Array2::from_shape_vec(
+            (final_rows, final_cols), 
+            out
+        ).expect("Failed to create integral image array");
+
+        PyArray2::from_array(py, &integral_array).to_owned()
+
+    }
+
     pub fn sliding_window_multi_threshold(
             &self,
             py: Python,
@@ -60,19 +107,19 @@ impl IntegralImage {
 
             // println!("last: {:?}, sum: {}", integral_vec, integral_vec.iter().map(|&x| x as u64).sum::<u64>());
 
-            let movement_rows = integral_height - window_size;
-            let movement_cols = integral_width - window_size;
+            let final_rows = integral_height - window_size;
+            let final_cols = integral_width - window_size;
     
             let thresholds: Vec<u8> = (0..=255).step_by(255 / (thresholds_num - 1)).collect(); // assuming 255 is the max value of an image
             let devisor: usize = window_size * window_size * 255 / thresholds_num;
     
-            let mut out = vec![0u8; movement_cols * movement_rows];
+            let mut out = vec![0u8; final_cols * final_rows];
     
             out.par_iter_mut()
                 .enumerate()
                 .for_each(|(index, out_pixel)| {
-                let img_row = index / movement_cols;
-                let img_col = index % movement_cols;
+                let img_row = index / final_cols;
+                let img_col = index % final_cols;
                 
                 let sum: u32 = rectangle_sum(
                         &integral_vec,
@@ -88,7 +135,7 @@ impl IntegralImage {
             });
     
             let integral_array = Array2::from_shape_vec(
-                (movement_rows, movement_cols), 
+                (final_rows, final_cols), 
                 out
             ).expect("Failed to create integral image array");
     
@@ -99,7 +146,7 @@ impl IntegralImage {
         &self, 
         py: Python,
         window_size: usize,
-        threshold: usize
+        threshold: usize,
     ) -> Py<PyArray2<u8>> {
 
             assert_eq!(window_size % 2, 1, "window_size must be odd");
@@ -128,25 +175,24 @@ impl IntegralImage {
                 let img_row = index / final_width;
                 let img_col = index % final_width;
                 
-                let sum: u32 = rectangle_sum(
+                let sum = rectangle_sum(
                         &integral_vec,
                         integral_width,
                         img_col, 
                         img_row, 
                         window_size, 
                         window_size
-                );
+                ) as usize;
 
                 let current_pixel = image_slice[
                     (img_row + (window_size / 2)) * width + (img_col + (window_size / 2))
-                ];
+                ] as usize;
 
-                if current_pixel as usize * window_items >= 
-                    sum as usize * (255 - threshold) / 255 {
+                if current_pixel * window_items >= sum * (100 - threshold) / 100 {
 
                     *out_pixel = 255;
-
                 }
+               
 
             });
     
@@ -161,26 +207,122 @@ impl IntegralImage {
 
     }
 
-    // pub fn adaptive_window_threshold2(
-    //     &self,
-    //     py: Python, 
-    //     window_size: usize, 
-    //     threshold: usize
-    // ) ->  Py<PyArray2<u8>> {
+    pub fn threshold_integral(
+        &self,
+        py: Python,
+        t: f32,
+    ) -> Py<PyArray2<u8>> {
+        let arr = self.integral_image.as_ref(py);
+        let integral_width: usize = arr.shape()[1];
+        let integral_height: usize = arr.shape()[0];
 
-    //     let image = unsafe {
-    //          self.source_image.as_ref(py).as_array() 
-    //     };
+        let integral_vec: Vec<u32> = arr.to_vec().unwrap();
 
-    //     let int_img = unsafe {
-    //         self.integral_image.as_ref(py).as_array()
-    //     };
+        let final_rows = integral_height - 1;
+        let final_cols = integral_width - 1;
 
-    //     let out_o,g
+        let mut out = vec![0u8; final_cols * final_rows];
 
-    //     PyArray2::from_array(py, &out_img).to_owned()
+        let s = (final_rows.max(final_cols) / 8) as i32;
+        let s2 = (s / 4) as i32;
 
-    // }
+        let source_image_slice = unsafe { self.source_image.as_ref(py).as_slice().expect("Failed to get slice of source image") };
+
+        out.par_iter_mut()
+            .enumerate()
+            .for_each(|(index, out_pixel)| {
+                let i = (index / final_cols) as i32;
+                let j = (index % final_cols) as i32;
+
+                let y1 = (i - s2).max(0);
+                let y2 = (i + s2).min(final_rows as i32 - 1);
+                let x1 = (j - s2).max(0);
+                let x2 = (j + s2).min(final_cols as i32 - 1);
+
+                let count = (x2 - x1) * (y2 - y1);
+                let sum = rectangle_sum(
+                    &integral_vec,
+                    integral_width,
+                    x1 as usize,
+                    y1 as usize,
+                    (x2 - x1) as usize,
+                    (y2 - y1) as usize,
+                );
+
+                let current_pixel = source_image_slice[i as usize * final_cols + j as usize] as u32;
+
+                if (current_pixel * count as u32) > (sum as f32 * (1.0 - t)) as u32 {
+                    *out_pixel = 255;
+                }
+            });
+
+        let output_array = Array2::from_shape_vec(
+            (final_rows, final_cols), 
+            out
+        ).expect("Failed to create output image array");
+
+        PyArray2::from_array(py, &output_array).to_owned()
+    }
+
+    pub fn adaptive_window_mean_threshold(
+        &self, 
+        py: Python,
+        window_size: usize,
+        threshold_factor: f32,
+    ) -> Py<PyArray2<u8>> {
+
+        assert_eq!(window_size % 2, 1, "window_size must be odd");
+
+        let integral_image = self.integral_image.as_ref(py);
+        let integral_width: usize = integral_image.shape()[1];
+        let integral_vec: Vec<u32> = integral_image.to_vec().unwrap();
+        
+        let image = self.source_image.as_ref(py);
+        let height = image.shape()[0];
+        let width = image.shape()[1];
+        let image_slice = unsafe {image.as_slice().unwrap()};
+
+        let final_height = height - window_size;
+        let final_width = width - window_size;
+        
+        let mut out = vec![0u8; final_width * final_height];
+        
+        let window_items = window_size * window_size;
+        let half_window = (window_size / 2) as isize;
+        
+        out.par_iter_mut()
+            .enumerate()
+            .for_each(|(index, out_pixel)| {
+            
+            let img_row = index / final_width;
+            let img_col = index % final_width;
+            
+            let sum = rectangle_sum(
+                    &integral_vec,
+                    integral_width,
+                    img_col,
+                    img_row,
+                    window_size,
+                    window_size
+            ) as usize;
+
+            let current_pixel_index = (img_row as isize + half_window) * width as isize + (img_col as isize + half_window);
+            let current_pixel = image_slice[current_pixel_index as usize] as usize;
+
+            let mean_value = sum / window_items;
+
+            if current_pixel as f32 > mean_value as f32 * threshold_factor {
+                *out_pixel = 255;
+            }
+        });
+
+        let output_array = Array2::from_shape_vec(
+            (final_height, final_width), 
+            out
+        ).expect("Failed to create output image array");
+
+        PyArray2::from_array(py, &output_array).to_owned()
+    }
 }
 
 pub fn rectangle_sum(
